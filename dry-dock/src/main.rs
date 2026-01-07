@@ -1,3 +1,4 @@
+use chrono::Datelike;
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
@@ -22,7 +23,7 @@ impl MyApp {
 }
 
 impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {        
         // Lets Load the Menu Bar
         egui::TopBottomPanel::top("menu_bar")
         .show(ctx, |ui| {
@@ -35,8 +36,21 @@ impl eframe::App for MyApp {
         // Central Panel
         egui::CentralPanel::default()
         .show(ctx, |ui| {
-            // Load Centra Panel
+            // Load Central Panel
             load_central_panel(ui, &self.config);
+        });
+
+        // Bottom Panel
+        egui::TopBottomPanel::bottom("bottom_panel")
+        .show(ctx, |ui| {
+            ui.horizontal_centered(|ui| {
+                // Version Info
+                ui.label(format!("Version: {}", self.config.version));
+                // Separator
+                ui.separator();
+                // Copyright Info
+                ui.label(format!("© {} Dry Dock. All rights reserved.", load_current_year()));
+            });
         });
     }
 
@@ -102,13 +116,22 @@ fn load_menu(ui: &mut egui::Ui, config: &Config) {
     // Load Menu Styling
     ui.style_mut().text_styles.insert(
         egui::TextStyle::Button, 
-      egui::FontId::new(18.0, 
+      egui::FontId::new(24.0, 
      egui::FontFamily::Proportional)
     );
 
+    // Load Menu Padding For Buttom
+    ui.spacing_mut().button_padding = egui::vec2(10.0, 10.0);
+
     // Load Menu Button
     ui.menu_button(config.app_name.as_str(), |ui| {
-        if ui.button("Exit").clicked() {
+        // Create Exit Button
+        let exit_button = egui::Button::new("Exit")
+        .min_size(egui::vec2(100.0, 30.0));
+        
+        // Load Exit Button
+        if ui.add(exit_button)
+        .clicked() {
             std::process::exit(0);
         }
     });
@@ -122,16 +145,18 @@ fn load_central_panel(ui: &mut egui::Ui, config: &Config) {
      egui::FontFamily::Proportional)
     );
 
-    // Display App Version and Welcome Message
-    ui.heading("Welcome to Dry Dock!");
-    ui.label(format!("Version: {}", config.version));
-
-    // Seperator
-    ui.separator();
+    // Load Central Panel Spacing
+    ui.spacing_mut().item_spacing = egui::vec2(10.0, 10.0);
 
     // Body Content
     if ui.button("Click me")
     .clicked() {
+        println!("App Name: {}", config.app_name);
         println!("Button clicked!");
     }
+}
+
+fn load_current_year() -> String {
+    let current_year = chrono::Utc::now().year();
+    current_year.to_string()
 }
