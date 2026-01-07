@@ -1,0 +1,4 @@
+dry-dock/assets/llama/Resources/ollama filter=lfs diff=lfs merge=lfs -text
+dry-dock/assets/llama/Resources/ollama-mlx filter=lfs diff=lfs merge=lfs -text
+dry-dock/assets/llama/Resources/mlx.metallib filter=lfs diff=lfs merge=lfs -text
+dry-dock/assets/llama/Resources/*.dylib filter=lfs diff=lfs merge=lfs -text
