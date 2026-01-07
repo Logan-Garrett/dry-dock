@@ -10,36 +10,33 @@ struct Config {
     is_vsync_enabled: bool,
 }
 
-struct MyApp;
+struct MyApp {
+    // Load App Config
+    config: Config,
+}
 
 impl MyApp {
-    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        Self
+    fn new(_cc: &eframe::CreationContext<'_>, config: Config) -> Self {
+        Self { config }
     }
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default()
+        // Lets Load the Menu Bar
+        egui::TopBottomPanel::top("menu_bar")
         .show(ctx, |ui| {
-            ui.heading("Welcome to Dry Dock!");
+            egui::MenuBar::new().ui(ui, |ui| {
+                // Load Menu
+                load_menu(ui, &self.config);
+            });
         });
 
+        // Central Panel
         egui::CentralPanel::default()
         .show(ctx, |ui| {
-            // Seperator
-            ui.separator();
-
-            if ui.button("Click me")
-            .clicked() {
-                println!("Button clicked!");
-            }
-
-            if ui.button("Exit Dry Dock")
-            .clicked() {
-                // Exit the Process
-                std::process::exit(0);
-            }
+            // Load Centra Panel
+            load_central_panel(ui, &self.config);
         });
     }
 
@@ -92,9 +89,49 @@ fn main() -> Result<(), eframe::Error> {
         Box::new(|cc| 
             Ok(
                 Box::new(
-                    MyApp::new(cc)
+                    MyApp::new(cc, config.clone())
                 )
             )
         ),
     )
+}
+
+
+// Helpers.
+fn load_menu(ui: &mut egui::Ui, config: &Config) {
+    // Load Menu Styling
+    ui.style_mut().text_styles.insert(
+        egui::TextStyle::Button, 
+      egui::FontId::new(18.0, 
+     egui::FontFamily::Proportional)
+    );
+
+    // Load Menu Button
+    ui.menu_button(config.app_name.as_str(), |ui| {
+        if ui.button("Exit").clicked() {
+            std::process::exit(0);
+        }
+    });
+}
+
+fn load_central_panel(ui: &mut egui::Ui, config: &Config) {
+    // Load Central Panel Styling
+    ui.style_mut().text_styles.insert(
+        egui::TextStyle::Heading, 
+      egui::FontId::new(24.0, 
+     egui::FontFamily::Proportional)
+    );
+
+    // Display App Version and Welcome Message
+    ui.heading("Welcome to Dry Dock!");
+    ui.label(format!("Version: {}", config.version));
+
+    // Seperator
+    ui.separator();
+
+    // Body Content
+    if ui.button("Click me")
+    .clicked() {
+        println!("Button clicked!");
+    }
 }
