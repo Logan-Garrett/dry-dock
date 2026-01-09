@@ -89,14 +89,14 @@ impl Screen for NotesScreen {
 
         // Display notes
         ui.vertical(|ui| {
-            for (id, title, details, created_at, updated_at) in &self.notes {
+            for (_id, title, details, created_at, updated_at) in &self.notes {
                 // Load Notes Styling
                 ui.style_mut().text_styles.insert(
                     egui::TextStyle::Body,
                     egui::FontId::new(16.0, egui::FontFamily::Proportional)
                 );
                 ui.group(|ui| {
-                    ui.label(format!("ID: {}", id));
+                    // ui.label(format!("ID: {}", id)); // I dont want this right now.
                     ui.label(format!("Title: {}", title));
                     ui.label(format!("Details: {}", details));
                     ui.label(format!("Created At: {}", created_at));
@@ -222,13 +222,14 @@ impl Modal for CreateNoteModal {
         
         ui.horizontal(|ui| {
             if ui.button("Create").clicked() {
-                println!("Creating Note...");
-                println!("Title: {}", self.title);
-                println!("Details: {}", self.details);
+                // DEBUG if needed I Guess
+                // println!("Creating Note...");
+                // println!("Title: {}", self.title);
+                // println!("Details: {}", self.details);
                 if let Err(e) = create_note(&self.title, &self.details) {
                     println!("Error creating note: {}", e);
                 } else {
-                    println!("Note created successfully.");
+                    // println!("Note created successfully.");
                 }
                 // Find a way to throw success/failure messages later.
                 should_close = true;
