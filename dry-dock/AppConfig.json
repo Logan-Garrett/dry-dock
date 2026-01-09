@@ -1,5 +1,6 @@
 {
     "app_name": "Dry Dock",
     "version": "1.0.0",
+    "icon_path": "assets/icons/app_icon.png",
     "is_vsync_enabled": true
 }

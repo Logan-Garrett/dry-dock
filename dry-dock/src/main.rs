@@ -17,6 +17,7 @@ const AUTO_SAVE_INTERVAL_SECS: u64 = 60;
 struct Config {
     app_name: String,
     version: String,
+    icon_path: String,
     is_vsync_enabled: bool,
 }
 
@@ -763,11 +764,22 @@ fn main() -> Result<(), eframe::Error> {
 
     // Need to find a good Cron Scheduler for Rust.
 
-    // Maybe Load Custom Icon(s) Here?
+    // Load Application Icon
+    let icon_image = image::open(&config.icon_path)
+        .expect("Failed to load application icon")
+        .to_rgba8();
+    
+    let (icon_width, icon_height) = icon_image.dimensions();
+    let icon = eframe::egui::IconData {
+        rgba: icon_image.into_raw(),
+        width: icon_width,
+        height: icon_height,
+    };
 
     // Configures The Window.
     let options =  eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
+            .with_icon(icon)
             .with_decorations(true)
             .with_resizable(true)
             .with_transparent(false)
