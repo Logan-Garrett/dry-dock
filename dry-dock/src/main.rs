@@ -3,6 +3,7 @@ use rusqlite::params;
 use serde::{Deserialize, Serialize};
 
 use crate::dal::db_context::*;
+use crate::services::*;
 use crate::common::helper::*;
 
 // Declare modules
@@ -28,12 +29,120 @@ enum ActiveScreen {
     Notes,
     Assistant,
     Terminal,
+    Bookmarks,
 }
 
 // Trait that all screens must implement
 trait Screen {
     fn title(&self) -> &str;
     fn render(&mut self, ui: &mut egui::Ui); // Renders the screen
+}
+
+#[derive(Default)]
+struct BookmarksScreen {
+    bookmarks: Vec<(i32, String, String, String)>, // (id, name, path, created_at)
+}
+
+impl BookmarksScreen {
+    fn title(&self) -> &str {
+        "Bookmarks Manager"
+    }
+
+    // Add a render method that takes active_modal as parameter
+    fn render(&mut self, ui: &mut egui::Ui, active_modal: &mut ActiveModal) {
+        ui.heading(self.title());
+        ui.add_space(10.0);
+
+        ui.horizontal(|ui| {
+            // Create Add Bookmark Button
+            let add_bookmark_button = egui::Button::new("Add New Bookmark")
+                .min_size(egui::vec2(150.0, 30.0));
+
+            if ui.add(add_bookmark_button).clicked() {
+                *active_modal = ActiveModal::AddBookmark;
+                self.bookmarks.clear();
+            }
+
+            // Create Refresh Button
+            let refresh_button = egui::Button::new("Refresh")
+                .min_size(egui::vec2(100.0, 30.0));
+
+            if ui.add(refresh_button).clicked() {
+                self.bookmarks.clear();
+            }
+        });
+
+        // Separator
+        ui.separator();
+        
+        // Load bookmarks if empty
+        if self.bookmarks.is_empty() {
+            match bookmark_service::fetch_all_bookmarks() {
+                Ok(bookmarks) => {
+                    self.bookmarks = bookmarks;
+                }
+                Err(e) => {
+                    ui.label(format!("Error loading bookmarks: {}", e));
+                    return;
+                }
+            }
+        }
+
+        // Track bookmark to delete
+        let mut id_to_delete: Option<i32> = None;
+
+        // Display bookmarks
+        egui::ScrollArea::vertical()
+            .show(ui, |ui| {
+                for (_id, name, path, created_at) in &self.bookmarks {
+                    ui.group(|ui| {
+                        ui.horizontal(|ui| {
+                            ui.vertical(|ui| {
+                                ui.label(format!("Name: {}", name));
+                                ui.label(format!("Path/URL: {}", path));
+                                ui.label(format!("Created At: {}", created_at));
+                            });
+                            
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                // Delete bookmark button
+                                let delete_button = egui::Button::new("Delete Bookmark")
+                                    .min_size(egui::vec2(120.0, 30.0));
+                                if ui.add(delete_button).clicked() {
+                                    id_to_delete = Some(*_id);
+                                }
+                                
+                                // Open bookmark button
+                                let open_button = egui::Button::new("Open")
+                                    .min_size(egui::vec2(80.0, 30.0));
+                                if ui.add(open_button).clicked() {
+                                    bookmark_service::open_bookmark_path(path);
+                                }
+                            });
+                        });
+                    });
+
+                    ui.add_space(10.0);
+                    ui.separator();
+                }
+            });
+
+        // Delete bookmark after iteration
+        if let Some(id) = id_to_delete {
+            match bookmark_service::delete_bookmark(id) {
+                Ok(_) => {
+                    println!("Bookmark deleted successfully.");
+                    // Remove from local list
+                    self.bookmarks.retain(|(bm_id, _, _, _)| *bm_id != id);
+
+                    // Now force a UI refresh by clearing and reloading bookmarks
+                    self.bookmarks.clear();
+                }
+                Err(e) => {
+                    println!("Error deleting bookmark: {}", e);
+                }
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -194,6 +303,9 @@ impl Screen for NotesScreen {
                     println!("Note deleted successfully.");
                     // Remove from local list
                     self.notes.retain(|(note_id, _, _, _, _)| *note_id != id);
+
+                    // Now force a UI refresh by clearing and reloading notes
+                    self.notes.clear();
                 }
                 Err(e) => {
                     println!("Error deleting note: {}", e);
@@ -210,6 +322,7 @@ enum ActiveModal {
     None,
     AddFeed,
     CreateNote,
+    AddBookmark,
     Settings,
 }
 
@@ -217,6 +330,52 @@ enum ActiveModal {
 trait Modal {
     fn title(&self) -> &str;
     fn render(&mut self, ui: &mut egui::Ui) -> bool; // Returns true if should close
+}
+
+#[derive(Default)]
+struct AddBookmarkModal {
+    name: String,
+    location: String,
+}
+
+impl Modal for AddBookmarkModal {
+    fn title(&self) -> &str {
+        "Add New Bookmark"
+    }
+
+    fn render(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut should_close = false;
+
+        ui.label("Bookmark Name:");
+        ui.add_space(5.0);
+        ui.text_edit_singleline(&mut self.name);
+        ui.label("Bookmark Location (URL or File Path):");
+        ui.add_space(5.0);
+        ui.text_edit_singleline(&mut self.location);
+        ui.add_space(10.0);
+
+        ui.horizontal(|ui| {
+            if ui.button("Add").clicked() {
+                if let Err(e) = bookmark_service::add_new_bookmark(&self.name, &self.location) {
+                    println!("Error adding bookmark: {}", e);
+                } else {
+                    // println!("Bookmark added successfully.");
+                }
+                should_close = true;
+            }
+            if ui.button("Cancel").clicked() {
+                should_close = true;
+            }
+        });
+
+        // Reset fields if closing
+        if should_close {
+            self.name.clear();
+            self.location.clear();
+        }
+
+        should_close
+    }
 }
 
 #[derive(Default)]
@@ -340,6 +499,12 @@ impl Modal for CreateNoteModal {
                 should_close = true;
             }
         });
+
+        // Clean up fields if closing
+        if should_close {
+            self.title.clear();
+            self.details.clear();
+        }
         
         should_close
     }
@@ -353,11 +518,13 @@ struct MyApp {
     // SCTREENS
     feeds_screen: FeedsScreen, // Maybe put these in a Vec or HashMap to not have to add new fields every time and just load some other way maybe via trait objects?
     notes_screen: NotesScreen,
+    bookmarks_screen: BookmarksScreen,
     // Single state for all modals
     active_modal: ActiveModal,
     // Dynamic modal instances (Similar to Enums and are needed here and there but this is for state)
     add_feed_modal: AddFeedModal,
     create_note_modal: CreateNoteModal,
+    add_bookmark_modal: AddBookmarkModal,
     // manage_feeds_modal: ManageFeedsModal,
 }
 
@@ -369,14 +536,16 @@ impl MyApp {
             active_modal: ActiveModal::None,
             feeds_screen: FeedsScreen::default(), // These Ttitles DUMB here but ehhhh for now.
             notes_screen: NotesScreen::default(),
+            bookmarks_screen: BookmarksScreen::default(),
             add_feed_modal: AddFeedModal::default(),
             create_note_modal: CreateNoteModal::default(),
+            add_bookmark_modal: AddBookmarkModal::default(),
         }
     }
 }
 
 impl eframe::App for MyApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {        
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Lets Load the Menu Bar
         egui::TopBottomPanel::top("menu_bar")
         .show(ctx, |ui| {
@@ -483,6 +652,21 @@ impl MyApp {
                 
                 (title, should_close)
             }
+            ActiveModal::AddBookmark => {
+                let modal = &mut self.add_bookmark_modal;
+                let title = modal.title().to_string();
+                let mut should_close = false;
+
+                egui::Window::new(&title)
+                    .collapsible(false)
+                    .resizable(false)
+                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                    .show(ctx, |ui| {
+                        should_close = modal.render(ui);
+                    });
+                
+                (title, should_close)
+            }
             ActiveModal::Settings => {
                 let modal = &mut SettingsModal;
                 let title = modal.title().to_string();
@@ -534,8 +718,15 @@ impl MyApp {
             ActiveScreen::Terminal => {
                 egui::CentralPanel::default()
                     .show(ctx, |ui| {
-                        ui.heading("Terminal");
-                        ui.label("Terminal screen is under construction.");
+                         ui.heading("Terminal");
+                         ui.label("In development.");
+                    });
+            }
+            ActiveScreen::Bookmarks => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| {
+                        self.bookmarks_screen.title();
+                        self.bookmarks_screen.render(ui, &mut self.active_modal);
                     });
             }
             ActiveScreen::None => {
@@ -757,8 +948,11 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
     let bookmarks_button = ui.button("Bookmarks");
     if bookmarks_button.clicked() {
         println!("Loading Bookmarks Manager...");
-        // *active_modal = ActiveModal::None; // Close any modals
-        // *active_screen = ActiveScreen::Feeds; // LOAD ME SCREEEEEN
+        *active_screen = ActiveScreen::Bookmarks;
+    }
+
+    if *active_screen == ActiveScreen::Bookmarks {
+        bookmarks_button.highlight();
     }
 }
 
