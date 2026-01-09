@@ -1,6 +1,13 @@
-use chrono::Datelike;
 use eframe::egui;
+use rusqlite::params;
 use serde::{Deserialize, Serialize};
+
+use crate::dal::db_context::*;
+use crate::common::helper::*;
+
+// Declare modules
+mod dal;
+mod common;
 
 const AUTO_SAVE_INTERVAL_SECS: u64 = 60;
 
@@ -40,7 +47,9 @@ impl Screen for FeedsScreen {
 } 
 
 #[derive(Default)]
-struct NotesScreen;
+struct NotesScreen {
+    notes: Vec<(i32, String, String, i64, Option<i64>)>, // (id, title, details, created_at, updated_at) // May need a model down the road....
+}
 
 impl Screen for NotesScreen {
     fn title(&self) -> &str {
@@ -48,7 +57,58 @@ impl Screen for NotesScreen {
     }
     
     fn render(&mut self, ui: &mut egui::Ui) {
-        ui.label("This is the Notes Screen.");
+        // Add a refresh button (May not keep this here later)
+        let refresh_notes_button = egui::Button::new("Refresh Notes")
+            .min_size(egui::vec2(120.0, 30.0));
+        if ui.add(refresh_notes_button).clicked() {
+            match get_notes() {
+                Ok(notes) => {
+                    self.notes = notes;
+                }
+                Err(e) => {
+                    println!("Error refreshing notes: {}", e);
+                }
+            }
+        }
+        
+        // Separator
+        ui.separator();
+
+        // Load notes if empty (or add a refresh button later)
+        if self.notes.is_empty() {
+            match get_notes() {
+                Ok(notes) => {
+                    self.notes = notes;
+                }
+                Err(e) => {
+                    ui.label(format!("Error loading notes: {}", e));
+                    return;
+                }
+            }
+        }
+
+        // Display notes
+        ui.vertical(|ui| {
+            for (id, title, details, created_at, updated_at) in &self.notes {
+                // Load Notes Styling
+                ui.style_mut().text_styles.insert(
+                    egui::TextStyle::Body,
+                    egui::FontId::new(16.0, egui::FontFamily::Proportional)
+                );
+                ui.group(|ui| {
+                    ui.label(format!("ID: {}", id));
+                    ui.label(format!("Title: {}", title));
+                    ui.label(format!("Details: {}", details));
+                    ui.label(format!("Created At: {}", created_at));
+                    if let Some(updated) = updated_at {
+                        ui.label(format!("Updated At: {}", updated));
+                    }
+                });
+                ui.add_space(10.0);
+                // Separator between notes
+                ui.separator();
+            }
+        });
     }
 }
 
@@ -165,7 +225,12 @@ impl Modal for CreateNoteModal {
                 println!("Creating Note...");
                 println!("Title: {}", self.title);
                 println!("Details: {}", self.details);
-                println!("Note Date: {}", chrono::Utc::now().to_rfc3339());
+                if let Err(e) = create_note(&self.title, &self.details) {
+                    println!("Error creating note: {}", e);
+                } else {
+                    println!("Note created successfully.");
+                }
+                // Find a way to throw success/failure messages later.
                 should_close = true;
             }
             if ui.button("Cancel").clicked() {
@@ -378,6 +443,13 @@ fn main() -> Result<(), eframe::Error> {
     // * Sqlite Migrations & Structures
     // * What Else?
 
+    // Change this to load from config later.
+    // May need a builder.rs to swap the DB Path based on OS or something or 
+    // store them all in config and load based on OS.
+    let db_path = get_database_path("DryDock");
+    _ = initialize_database(&db_path)
+        .expect("Failed to initialize database");
+
     // Load Background Workers
     // RSS Feed Fetcher
 
@@ -415,7 +487,6 @@ fn main() -> Result<(), eframe::Error> {
         ),
     )
 }
-
 
 // Load Menu
 fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal, active_screen: &mut ActiveScreen) {
@@ -530,8 +601,43 @@ fn load_central_panel(ui: &mut egui::Ui, config: &Config) {
     ui.add_space(10.0);
 }
 
-// Helper to load the current year as a string
-fn load_current_year() -> String {
-    let current_year = chrono::Utc::now().year();
-    current_year.to_string()
+// BELOW ARE DB Queries and Methods so IGNORE AS THEY
+// WILL BE MOVED LATER TO THEIR RESPECTIVE Files and Folders nbut I am lazy.
+
+fn create_note(title: &str, details: &str) -> Result<(), String> {
+    let conn = get_connection()?;
+
+    let now = chrono::Utc::now().timestamp();
+
+    conn.execute(
+        "INSERT INTO notes (title, details, created_at) VALUES (?1, ?2, ?3)",
+        params![title, details, now],
+    )
+    .map_err(|e| format!("Failed to create note: {}", e))?;
+
+    Ok(())
+}
+
+fn get_notes() -> Result<Vec<(i32, String, String, i64, Option<i64>)>, String> {
+    let conn = get_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, title, details, created_at, updated_at FROM notes")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let notes = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i32>("id")?,
+                row.get::<_, String>("title")?,
+                row.get::<_, String>("details")?,
+                row.get::<_, i64>("created_at")?,
+                row.get::<_, Option<i64>>("updated_at")?,
+            ))
+        })
+        .map_err(|e| format!("Failed to query notes: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to collect notes: {}", e))?;
+
+    Ok(notes)
 }
