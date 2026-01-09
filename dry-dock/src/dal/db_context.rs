@@ -84,6 +84,21 @@ fn run_migrations() -> Result<(), String> {
             created_at INTEGER NOT NULL
         );
         
+        CREATE TABLE IF NOT EXISTS feed_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            feed_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            link TEXT,
+            description TEXT,
+            pub_date INTEGER,
+            guid TEXT UNIQUE,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (feed_id) REFERENCES feeds(id) ON DELETE CASCADE
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_feed_items_feed_id ON feed_items(feed_id);
+        CREATE INDEX IF NOT EXISTS idx_feed_items_pub_date ON feed_items(pub_date DESC);
+        
         CREATE TABLE IF NOT EXISTS notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,

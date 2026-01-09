@@ -8,6 +8,7 @@ use crate::common::helper::*;
 // Declare modules
 mod dal;
 mod common;
+mod services;
 
 const AUTO_SAVE_INTERVAL_SECS: u64 = 60;
 
@@ -34,15 +35,71 @@ trait Screen {
 }
 
 #[derive(Default)]
-struct FeedsScreen;
+struct FeedsScreen {
+    // Store feed items instead of feeds for now.
+    feed_items: Vec<(i32, String, String, String, i64)>, // (id, title, link, description, pub_date)
+}
 
 impl Screen for FeedsScreen {
     fn title(&self) -> &str {
-        "RSS Feeds"
+        "RSS Feed Items"
     }
     
     fn render(&mut self, ui: &mut egui::Ui) {
-        ui.label("This is the RSS Feeds Screen.");
+        ui.heading(self.title());
+        ui.add_space(10.0);
+        
+        // Add refresh button
+        if ui.button("Refresh All Feeds").clicked() {
+            match crate::services::rss_service::refresh_all_feeds() {
+                Ok(msg) => println!("{}", msg),
+                Err(e) => println!("Error refreshing feeds: {}", e),
+            }
+            // Reload items
+            self.feed_items.clear();
+        }
+        
+        ui.separator();
+        
+        // Load feed items if empty
+        if self.feed_items.is_empty() {
+            // Come Back to this becuase I may want more or less....
+            match get_feed_items(10000) {
+                Ok(items) => {
+                    self.feed_items = items;
+                }
+                Err(e) => {
+                    ui.label(format!("Error loading feed items: {}", e));
+                    return;
+                }
+            }
+        }
+
+        // Display feed items
+        egui::ScrollArea::vertical()
+            .show(ui, |ui| {
+                for (_id, title, link, description, pub_date) in &self.feed_items {
+                    ui.group(|ui| {
+                        ui.hyperlink_to(title, link);
+                        
+                        // Format date
+                        let datetime = chrono::DateTime::from_timestamp(*pub_date, 0);
+                        if let Some(dt) = datetime {
+                            ui.label(format!("Published: {}", dt.format("%Y-%m-%d %H:%M")));
+                        }
+                        
+                        // Show truncated description
+                        let desc = if description.len() > 200 {
+                            format!("{}...", &description[..200])
+                        } else {
+                            description.clone()
+                        };
+                        ui.label(desc);
+                    });
+                    ui.add_space(10.0);
+                    ui.separator();
+                }
+            });
     }
 } 
 
@@ -88,27 +145,59 @@ impl Screen for NotesScreen {
         }
 
         // Display notes
+        let mut id_to_delete: Option<i32> = None;
+        
         ui.vertical(|ui| {
-            for (_id, title, details, created_at, updated_at) in &self.notes {
+            for (id, title, details, created_at, updated_at) in &self.notes {
                 // Load Notes Styling
                 ui.style_mut().text_styles.insert(
                     egui::TextStyle::Body,
                     egui::FontId::new(16.0, egui::FontFamily::Proportional)
                 );
                 ui.group(|ui| {
-                    // ui.label(format!("ID: {}", id)); // I dont want this right now.
-                    ui.label(format!("Title: {}", title));
-                    ui.label(format!("Details: {}", details));
-                    ui.label(format!("Created At: {}", created_at));
-                    if let Some(updated) = updated_at {
-                        ui.label(format!("Updated At: {}", updated));
-                    }
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            // ui.label(format!("ID: {}", id)); // I dont want this right now.
+                            ui.label(format!("Title: {}", title));
+                            ui.label(format!("Details: {}", details));
+                            ui.label(format!("Created At: {}", created_at));
+                            if let Some(updated) = updated_at {
+                                ui.label(format!("Updated At: {}", updated));
+                            }
+                        });
+                        
+                        // Push delete button to the right
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                            let delete_note_button = egui::Button::new("Delete Note")
+                                .min_size(egui::vec2(100.0, 30.0));
+                            
+                            // We may want to add a confirmation dialog later.
+                            // Make it a generic one that can be used across the app.
+                            if ui.add(delete_note_button).clicked() {
+                                id_to_delete = Some(*id);
+                            }
+                        });
+                    });
                 });
                 ui.add_space(10.0);
                 // Separator between notes
                 ui.separator();
             }
         });
+        
+        // Delete note after iteration
+        if let Some(id) = id_to_delete {
+            match delete_note(id) {
+                Ok(_) => {
+                    println!("Note deleted successfully.");
+                    // Remove from local list
+                    self.notes.retain(|(note_id, _, _, _, _)| *note_id != id);
+                }
+                Err(e) => {
+                    println!("Error deleting note: {}", e);
+                }
+            }
+        }
     }
 }
 
@@ -119,7 +208,6 @@ enum ActiveModal {
     None,
     AddFeed,
     CreateNote,
-    RefreshFeeds,
 }
 
 /// Trait that all modals must implement
@@ -131,6 +219,7 @@ trait Modal {
 /// Add Feed Modal
 #[derive(Default)]
 struct AddFeedModal {
+    feed_title: String,
     url: String,
 }
 
@@ -142,6 +231,9 @@ impl Modal for AddFeedModal {
     fn render(&mut self, ui: &mut egui::Ui) -> bool {
         let mut should_close = false;
         
+        ui.label("Enter RSS Feed Title:");
+        ui.add_space(5.0);
+        ui.text_edit_singleline(&mut self.feed_title);
         ui.label("Enter RSS Feed URL:");
         ui.add_space(5.0);
         ui.text_edit_singleline(&mut self.url);
@@ -149,36 +241,22 @@ impl Modal for AddFeedModal {
         
         ui.horizontal(|ui| {
             if ui.button("Add").clicked() {
-                println!("Adding feed: {}", self.url);
-                // TODO: Add feed logic
+                if let Err(e) = add_feed(&self.url, &self.feed_title) {
+                    println!("Error adding feed: {}", e);
+                } else {
+                    // println!("Feed added successfully.");
+                }
                 should_close = true;
             }
             if ui.button("Cancel").clicked() {
                 should_close = true;
             }
         });
-        
-        should_close
-    }
-}
 
-/// Refresh Feeds Modal
-#[derive(Default)]
-struct RefreshFeedsModal;
-
-impl Modal for RefreshFeedsModal {
-    fn title(&self) -> &str {
-        "Refresh Feeds"
-    }
-    
-    fn render(&mut self, ui: &mut egui::Ui) -> bool {
-        let mut should_close = false;
-        
-        ui.label("Refreshing all RSS feeds...");
-        ui.add_space(10.0);
-
-        if ui.button("Close").clicked() {
-            should_close = true;
+        // Reset fields if closing
+        if should_close {
+            self.feed_title.clear();
+            self.url.clear();
         }
         
         should_close
@@ -256,7 +334,7 @@ struct MyApp {
     // Dynamic modal instances (Similar to Enums and are needed here and there but this is for state)
     add_feed_modal: AddFeedModal,
     create_note_modal: CreateNoteModal,
-    refresh_feeds_modal: RefreshFeedsModal,
+    // manage_feeds_modal: ManageFeedsModal,
 }
 
 impl MyApp {
@@ -269,7 +347,6 @@ impl MyApp {
             notes_screen: NotesScreen::default(),
             add_feed_modal: AddFeedModal::default(),
             create_note_modal: CreateNoteModal::default(),
-            refresh_feeds_modal: RefreshFeedsModal::default(),
         }
     }
 }
@@ -382,21 +459,6 @@ impl MyApp {
                 
                 (title, should_close)
             }
-            ActiveModal::RefreshFeeds => {
-                let modal = &mut self.refresh_feeds_modal;
-                let title = modal.title().to_string();
-                let mut should_close = false;
-                
-                egui::Window::new(&title)
-                    .collapsible(false)
-                    .resizable(false)
-                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-                    .show(ctx, |ui| {
-                        should_close = modal.render(ui);
-                    });
-                
-                (title, should_close)
-            }
             ActiveModal::None => (String::new(), false),
         };
 
@@ -494,22 +556,19 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
     // Load Menu Styling
     ui.style_mut().text_styles.insert(
         egui::TextStyle::Button, 
-      egui::FontId::new(24.0, 
-     egui::FontFamily::Proportional)
+        egui::FontId::new(24.0, egui::FontFamily::Proportional)
     );
 
-    // Load Menu Padding For Buttom
+    // Load Menu Padding For Button
     ui.spacing_mut().button_padding = egui::vec2(10.0, 10.0);
 
-    // Load App Menu Button
     ui.menu_button(config.app_name.as_str(), |ui| {
         // Create Exit Button
         let exit_button = egui::Button::new("Exit")
-        .min_size(egui::vec2(100.0, 30.0));
+            .min_size(egui::vec2(100.0, 30.0));
         
         // Load Exit Button
-        if ui.add(exit_button)
-        .clicked() {
+        if ui.add(exit_button).clicked() {
             std::process::exit(0);
         }
     });
@@ -517,70 +576,80 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
     // Separator
     ui.separator();
 
-    // Load RSS Menu Button
-    ui.menu_button("RSS", |ui| {
+    // Load RSS Menu Button - Highlight if Feeds screen is active
+    let rss_button = ui.menu_button("RSS", |ui| {
         // Create Load Feeds Screen Button
-        let load_feeds_screen_button = egui::Button::new("View Feeds")
-            .min_size(egui::vec2(100.0, 30.0));
-
-        // Create Fetch/Refresh Feeds Button
-        let fetch_feeds_button = egui::Button::new("Force Refresh Feeds")
-            .min_size(egui::vec2(100.0, 30.0));
+        let is_feeds_active = *active_screen == ActiveScreen::Feeds;
+        let load_feeds_screen_button = egui::Button::new("View RSS Feeds")
+            .min_size(egui::vec2(100.0, 30.0))
+            .selected(is_feeds_active);
 
         // Create Add New Feed Button
-        let add_feed_button = egui::Button::new("Add New Feed")
+        let add_feed_button = egui::Button::new("Add New RSS Feed")
             .min_size(egui::vec2(100.0, 30.0));
 
+        // Manage Subscribed Feeds Button
+        let manage_subscribed_feeds_button = egui::Button::new("RSS Subscribed Feeds")
+            .min_size(egui::vec2(150.0, 30.0));
+
         // Load Feeds Screen Button
-        if ui.add(load_feeds_screen_button)
-        .clicked() {
+        if ui.add(load_feeds_screen_button).clicked() {
             println!("Loading RSS Feeds Screen...");
             *active_modal = ActiveModal::None; // Close any modals
             *active_screen = ActiveScreen::Feeds; // LOAD ME SCREEEEEN
         }
 
         // Add New Feed Button
-        if ui.add(add_feed_button)
-        .clicked() {
+        if ui.add(add_feed_button).clicked() {
             println!("Adding New RSS Feed...");
             *active_modal = ActiveModal::AddFeed;
         }
 
-        // Load Fetch Feeds Button
-        if ui.add(fetch_feeds_button)
-        .clicked() {
-            println!("Fetching RSS Feeds...");
-            *active_modal = ActiveModal::RefreshFeeds;
+        // Manage Subscribed Feeds Button
+        if ui.add(manage_subscribed_feeds_button).clicked() {
+            println!("Managing Subscribed Feeds...");
+            // *active_modal = ActiveModal::None; // Close any modals
+            // *active_screen = ActiveScreen::Feeds; // LOAD ME SCREEEEEN
         }
     });
+
+    // Highlight the RSS menu button if Feeds screen is active
+    if *active_screen == ActiveScreen::Feeds {
+        rss_button.response.highlight();
+    }
 
     // Separator
     ui.separator();
 
-    // Load Notes Menu Button
-    ui.menu_button("Notes", |ui| {
+    // Load Notes Menu Button - Highlight if Notes screen is active
+    let notes_button = ui.menu_button("Notes", |ui| {
         // Create New Note Button
         let new_note_button = egui::Button::new("Create New Note")
             .min_size(egui::vec2(100.0, 30.0));
 
         // View Notes Screen Button
+        let is_notes_active = *active_screen == ActiveScreen::Notes;
         let view_notes_screen_button = egui::Button::new("View Notes")
-            .min_size(egui::vec2(100.0, 30.0));
+            .min_size(egui::vec2(100.0, 30.0))
+            .selected(is_notes_active);
         
         // Load New Note Button
-        if ui.add(new_note_button)
-        .clicked() {
+        if ui.add(new_note_button).clicked() {
             *active_modal = ActiveModal::CreateNote;
         }
 
         // Load View Notes Screen Button
-        if ui.add(view_notes_screen_button)
-        .clicked() {
+        if ui.add(view_notes_screen_button).clicked() {
             println!("Loading Notes Screen...");
             *active_modal = ActiveModal::None; // Close any modals
             *active_screen = ActiveScreen::Notes; // LOAD ME SCREEEEEN
         }
     });
+
+    // Highlight the Notes menu button if Notes screen is active
+    if *active_screen == ActiveScreen::Notes {
+        notes_button.response.highlight();
+    }
 }
 
 // Load Central Panel
@@ -605,6 +674,10 @@ fn load_central_panel(ui: &mut egui::Ui, config: &Config) {
 // BELOW ARE DB Queries and Methods so IGNORE AS THEY
 // WILL BE MOVED LATER TO THEIR RESPECTIVE Files and Folders nbut I am lazy.
 
+
+/////////////////////////////////////////////////////
+/// Notes Related DB Methods
+/////////////////////////////////////////////////////
 fn create_note(title: &str, details: &str) -> Result<(), String> {
     let conn = get_connection()?;
 
@@ -615,6 +688,18 @@ fn create_note(title: &str, details: &str) -> Result<(), String> {
         params![title, details, now],
     )
     .map_err(|e| format!("Failed to create note: {}", e))?;
+
+    Ok(())
+}
+
+fn delete_note(note_id: i32) -> Result<(), String> {
+    let conn = get_connection()?;
+
+    conn.execute(
+        "DELETE FROM notes WHERE id = ?1",
+        params![note_id],
+    )
+    .map_err(|e| format!("Failed to delete note: {}", e))?;
 
     Ok(())
 }
@@ -641,4 +726,78 @@ fn get_notes() -> Result<Vec<(i32, String, String, i64, Option<i64>)>, String> {
         .map_err(|e| format!("Failed to collect notes: {}", e))?;
 
     Ok(notes)
+}
+
+/////////////////////////////////////////////////////
+/// END Notes Related DB Methods
+/////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////
+/// RSS Feed Related DB Methods
+/////////////////////////////////////////////////////
+
+fn add_feed(url: &str, title: &str) -> Result<(), String> {
+    let conn = get_connection()?;
+
+    let now = chrono::Utc::now().timestamp();
+
+    conn.execute(
+        "INSERT INTO feeds (title, url, created_at) VALUES (?1, ?2, ?3)",
+        params![title, url, now],
+    )
+    .map_err(|e| format!("Failed to add feed: {}", e))?;
+
+    Ok(())
+}
+/* 
+// This doen the road to show what feeds I have.
+fn get_feeds() -> Result<Vec<(i32, String, String, Option<i64>, i64)>, String> {
+    let conn = get_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, title, url, last_updated, created_at FROM feeds")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let feeds = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i32>("id")?,
+                row.get::<_, String>("title")?,
+                row.get::<_, String>("url")?,
+                row.get::<_, Option<i64>>("last_updated")?,
+                row.get::<_, i64>("created_at")?,
+            ))
+        })
+        .map_err(|e| format!("Failed to query feeds: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to collect feeds: {}", e))?;
+
+    Ok(feeds)
+} */
+
+fn get_feed_items(limit: i32) -> Result<Vec<(i32, String, String, String, i64)>, String> {
+    let conn = get_connection()?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, title, link, description, pub_date FROM feed_items ORDER BY pub_date DESC LIMIT ?1")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    let mut items = stmt
+        .query_map(params![limit], |row| {
+            Ok((
+                row.get::<_, i32>("id")?,
+                row.get::<_, String>("title")?,
+                row.get::<_, String>("link")?,
+                row.get::<_, String>("description")?,
+                row.get::<_, i64>("pub_date")?,
+            ))
+        })
+        .map_err(|e| format!("Failed to query feed items: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to collect feed items: {}", e))?;
+
+    // Sort this by pub_date DESC to get latest items first.
+    items.sort_by(|a, b| b.4.cmp(&a.4));
+    
+    Ok(items)
 }
