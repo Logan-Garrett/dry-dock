@@ -739,13 +739,16 @@ impl MyApp {
 }
 
 fn main() -> Result<(), eframe::Error> {
-    // Load Config File.
-    let config_data = std::fs::read_to_string("AppConfig.json")
-        .expect("Unable to read config file");
+    // Load Config File from multiple possible locations
+    let config_data = common::helper::load_config_file()
+        .expect("Unable to read config file from any location");
 
     // Parse Config File.
-    let config: Config = serde_json::from_str(&config_data)
+    let mut config: Config = serde_json::from_str(&config_data)
         .expect("Unable to parse config file");
+
+    // Update icon path to point to bundled resource if needed
+    config.icon_path = common::helper::load_icon_path(&config.icon_path);
 
     // Load Startup Related Stuff.
     // * Sqlite Database
@@ -1045,9 +1048,6 @@ fn get_notes() -> Result<Vec<(i32, String, String, i64, Option<i64>)>, String> {
 }
 
 /////////////////////////////////////////////////////
-/// END Notes Related DB Methods
-/////////////////////////////////////////////////////
-
 /////////////////////////////////////////////////////
 /// RSS Feed Related DB Methods
 /////////////////////////////////////////////////////
