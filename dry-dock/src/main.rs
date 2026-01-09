@@ -1,4 +1,4 @@
-use eframe::egui;
+use eframe::egui::{self};
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 
@@ -26,6 +26,8 @@ enum ActiveScreen {
     None,
     Feeds,
     Notes,
+    Assistant,
+    Terminal,
 }
 
 // Trait that all screens must implement
@@ -208,12 +210,34 @@ enum ActiveModal {
     None,
     AddFeed,
     CreateNote,
+    Settings,
 }
 
 /// Trait that all modals must implement
 trait Modal {
     fn title(&self) -> &str;
     fn render(&mut self, ui: &mut egui::Ui) -> bool; // Returns true if should close
+}
+
+#[derive(Default)]
+struct SettingsModal;
+
+impl Modal for SettingsModal {
+    fn title(&self) -> &str {
+        "Settings"
+    }
+    
+    fn render(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut should_close = false;
+        
+        ui.label("Settings modal is under construction.");
+        
+        if ui.button("Close").clicked() {
+            should_close = true;
+        }
+        
+        should_close
+    }
 }
 
 /// Add Feed Modal
@@ -459,6 +483,22 @@ impl MyApp {
                 
                 (title, should_close)
             }
+            ActiveModal::Settings => {
+                let modal = &mut SettingsModal;
+                let title = modal.title().to_string();
+                let mut should_close = false;
+
+                egui::Window::new(&title)
+                    .collapsible(false)
+                    .resizable(true)
+                    .default_size([600.0, 400.0])
+                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                    .show(ctx, |ui| {
+                        should_close = modal.render(ui);
+                    });
+                
+                (title, should_close)
+            }
             ActiveModal::None => (String::new(), false),
         };
 
@@ -482,6 +522,20 @@ impl MyApp {
                     .show(ctx, |ui| {
                         self.notes_screen.title();
                         self.notes_screen.render(ui);
+                    });
+            }
+            ActiveScreen::Assistant => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| {
+                        ui.heading("AI Assistant");
+                        ui.label("AI Assistant screen is under construction.");
+                    });
+            }
+            ActiveScreen::Terminal => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| {
+                        ui.heading("Terminal");
+                        ui.label("Terminal screen is under construction.");
                     });
             }
             ActiveScreen::None => {
@@ -563,9 +617,20 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
     ui.spacing_mut().button_padding = egui::vec2(10.0, 10.0);
 
     ui.menu_button(config.app_name.as_str(), |ui| {
+        // Create settings button
+        let settings_button = egui::Button::new("Settings")
+            .min_size(egui::vec2(100.0, 30.0));
+
         // Create Exit Button
         let exit_button = egui::Button::new("Exit")
             .min_size(egui::vec2(100.0, 30.0));
+        
+        // Load Settings Button
+        if ui.add(settings_button).clicked() {
+            println!("Loading Settings...");
+            // Load Settings Model.
+            *active_modal = ActiveModal::Settings;
+        }
         
         // Load Exit Button
         if ui.add(exit_button).clicked() {
@@ -650,6 +715,40 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
     if *active_screen == ActiveScreen::Notes {
         notes_button.response.highlight();
     }
+
+    // Separator
+    ui.separator();
+
+    // Load AI Addsistant Menu Button which when clicked opens a screen and doesnt have 
+    // sub buttons.
+    let assistant_button = ui.button("Assistant");
+    if assistant_button.clicked() {
+        println!("Loading AI Assistant Screen...");
+        *active_modal = ActiveModal::None; // Close any modals
+        *active_screen = ActiveScreen::Assistant; // LOAD ME SCREEEEEN 
+        // Maybe change this to a modal later?
+    }
+
+    if *active_screen == ActiveScreen::Assistant {
+        assistant_button.highlight();
+    }
+
+    // Separator
+    ui.separator();
+
+    // Load Terminal Menu Button which when clicked opens a screen which we shall hook into some backgroudn
+    // terminal maybe handled in settings.
+    let terminal_button = ui.button("Terminal");
+    if terminal_button.clicked() {
+        println!("Loading Terminal Screen...");
+        *active_modal = ActiveModal::None; // Close any modals
+        *active_screen = ActiveScreen::Terminal; // LOAD ME SCREEEEEN
+    }
+
+    if *active_screen == ActiveScreen::Terminal {
+        terminal_button.highlight();
+    }
+
 }
 
 // Load Central Panel
