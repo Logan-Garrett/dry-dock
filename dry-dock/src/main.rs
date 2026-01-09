@@ -11,6 +11,47 @@ struct Config {
     is_vsync_enabled: bool,
 }
 
+/// Enum to represent the active screen
+/// Every screen in the app should be represented here.
+#[derive(Debug, Clone, PartialEq)]
+enum ActiveScreen {
+    None,
+    Feeds,
+    Notes,
+}
+
+// Trait that all screens must implement
+trait Screen {
+    fn title(&self) -> &str;
+    fn render(&mut self, ui: &mut egui::Ui); // Renders the screen
+}
+
+#[derive(Default)]
+struct FeedsScreen;
+
+impl Screen for FeedsScreen {
+    fn title(&self) -> &str {
+        "RSS Feeds"
+    }
+    
+    fn render(&mut self, ui: &mut egui::Ui) {
+        ui.label("This is the RSS Feeds Screen.");
+    }
+} 
+
+#[derive(Default)]
+struct NotesScreen;
+
+impl Screen for NotesScreen {
+    fn title(&self) -> &str {
+        "Notes"
+    }
+    
+    fn render(&mut self, ui: &mut egui::Ui) {
+        ui.label("This is the Notes Screen.");
+    }
+}
+
 /// Enum to represent the active modal state
 /// Every modal in the app should be represented here.
 #[derive(Debug, Clone, PartialEq)]
@@ -107,7 +148,7 @@ impl Modal for CreateNoteModal {
         ui.label("Note Details:");
         egui::ScrollArea::vertical()
             .id_salt("note_details_scroll")
-            .max_height(ui.available_height() - 50.0) // Leave space for buttons
+            .max_height(ui.available_height() - 20.0) 
             .show(ui, |ui| {
                 ui.add(
                     egui::TextEdit::multiline(&mut self.details)
@@ -139,6 +180,11 @@ impl Modal for CreateNoteModal {
 struct MyApp {
     // Load App Config
     config: Config,
+    // Single state for active screen
+    active_screen: ActiveScreen,
+    // SCTREENS
+    feeds_screen: FeedsScreen, // Maybe put these in a Vec or HashMap to not have to add new fields every time and just load some other way maybe via trait objects?
+    notes_screen: NotesScreen,
     // Single state for all modals
     active_modal: ActiveModal,
     // Dynamic modal instances (Similar to Enums and are needed here and there but this is for state)
@@ -151,7 +197,10 @@ impl MyApp {
     fn new(_cc: &eframe::CreationContext<'_>, config: Config) -> Self {
         Self { 
             config,
+            active_screen: ActiveScreen::None,
             active_modal: ActiveModal::None,
+            feeds_screen: FeedsScreen::default(), // These Ttitles DUMB here but ehhhh for now.
+            notes_screen: NotesScreen::default(),
             add_feed_modal: AddFeedModal::default(),
             create_note_modal: CreateNoteModal::default(),
             refresh_feeds_modal: RefreshFeedsModal::default(),
@@ -166,16 +215,18 @@ impl eframe::App for MyApp {
         .show(ctx, |ui| {
             egui::MenuBar::new().ui(ui, |ui| {
                 // Load Menu
-                load_menu(ui, &self.config, &mut self.active_modal);
+                load_menu(ui, &self.config, &mut self.active_modal, &mut self.active_screen);
             });
         });
 
-        // Central Panel
-        egui::CentralPanel::default()
-        .show(ctx, |ui| {
-            // Load Central Panel
-            load_central_panel(ui, &self.config);
-        });
+        // Central Panel - only show default content if no active screen
+        if self.active_screen == ActiveScreen::None {
+            egui::CentralPanel::default()
+            .show(ctx, |ui| {
+                // Load Central Panel
+                load_central_panel(ui, &self.config);
+            });
+        }
 
         // Bottom Panel
         egui::TopBottomPanel::bottom("bottom_panel")
@@ -192,6 +243,9 @@ impl eframe::App for MyApp {
 
         // Render active modal (if any)
         self.render_active_modal(ctx);
+
+        // IF we have an active screen, render it
+        self.render_active_screen(ctx);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
@@ -285,6 +339,29 @@ impl MyApp {
             self.active_modal = ActiveModal::None;
         }
     }
+
+    fn render_active_screen(&mut self, ctx: &egui::Context) {
+        match self.active_screen {
+            ActiveScreen::Feeds => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| {
+                        self.feeds_screen.title();
+                        self.feeds_screen.render(ui);
+                    });
+            }
+            ActiveScreen::Notes => {
+                egui::CentralPanel::default()
+                    .show(ctx, |ui| {
+                        self.notes_screen.title();
+                        self.notes_screen.render(ui);
+                    });
+            }
+            ActiveScreen::None => {
+                // No active screen to render
+                // Home Page?
+            }
+        }
+    }
 }
 
 fn main() -> Result<(), eframe::Error> {
@@ -341,7 +418,7 @@ fn main() -> Result<(), eframe::Error> {
 
 
 // Load Menu
-fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal) {
+fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal, active_screen: &mut ActiveScreen) {
     // Load Menu Styling
     ui.style_mut().text_styles.insert(
         egui::TextStyle::Button, 
@@ -370,13 +447,25 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal)
 
     // Load RSS Menu Button
     ui.menu_button("RSS", |ui| {
-        // Create Fetch Feeds Button
+        // Create Load Feeds Screen Button
+        let load_feeds_screen_button = egui::Button::new("View Feeds")
+            .min_size(egui::vec2(100.0, 30.0));
+
+        // Create Fetch/Refresh Feeds Button
         let fetch_feeds_button = egui::Button::new("Force Refresh Feeds")
             .min_size(egui::vec2(100.0, 30.0));
 
         // Create Add New Feed Button
         let add_feed_button = egui::Button::new("Add New Feed")
             .min_size(egui::vec2(100.0, 30.0));
+
+        // Load Feeds Screen Button
+        if ui.add(load_feeds_screen_button)
+        .clicked() {
+            println!("Loading RSS Feeds Screen...");
+            *active_modal = ActiveModal::None; // Close any modals
+            *active_screen = ActiveScreen::Feeds; // LOAD ME SCREEEEEN
+        }
 
         // Add New Feed Button
         if ui.add(add_feed_button)
@@ -401,11 +490,23 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal)
         // Create New Note Button
         let new_note_button = egui::Button::new("Create New Note")
             .min_size(egui::vec2(100.0, 30.0));
+
+        // View Notes Screen Button
+        let view_notes_screen_button = egui::Button::new("View Notes")
+            .min_size(egui::vec2(100.0, 30.0));
         
         // Load New Note Button
         if ui.add(new_note_button)
         .clicked() {
             *active_modal = ActiveModal::CreateNote;
+        }
+
+        // Load View Notes Screen Button
+        if ui.add(view_notes_screen_button)
+        .clicked() {
+            println!("Loading Notes Screen...");
+            *active_modal = ActiveModal::None; // Close any modals
+            *active_screen = ActiveScreen::Notes; // LOAD ME SCREEEEEN
         }
     });
 }
@@ -422,11 +523,11 @@ fn load_central_panel(ui: &mut egui::Ui, config: &Config) {
     ui.spacing_mut().item_spacing = egui::vec2(10.0, 10.0);
 
     // Body Content
-    if ui.button("Click me")
-    .clicked() {
-        println!("App Name: {}", config.app_name);
-        println!("Button clicked!");
-    }
+    // Welcome Message
+    ui.heading(format!("Welcome to {}!", config.app_name));
+    ui.add_space(10.0);
+    ui.label("Use the menu above to navigate through the application.");
+    ui.add_space(10.0);
 }
 
 // Helper to load the current year as a string
