@@ -18,3 +18,8 @@ pub fn get_database_path(app_name: &str) -> String {
     path.push("database.db");
     path.to_string_lossy().to_string()
 }
+
+// Helper to get the current timestamp as a string
+pub fn current_timestamp() -> String {
+    chrono::Utc::now().to_rfc3339()
+}

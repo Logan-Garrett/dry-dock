@@ -106,9 +106,22 @@ fn run_migrations() -> Result<(), String> {
             created_at INTEGER NOT NULL,
             updated_at INTEGER
         );
+
+        CREATE INDEX IF NOT EXISTS idx_notes_title ON notes(title);
+
+        CREATE TABLE IF NOT EXISTS bookmarks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            location TEXT UNIQUE NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_bookmarks_name ON bookmarks(name);
         "
     )
     .map_err(|e| format!("Failed to run migrations: {}", e))?;
+
+    // As we add more you run one after another here.
 
     Ok(())
 }

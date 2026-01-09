@@ -25,3 +25,6 @@ target
 
 # We dont want to commit the sqlite database file
 dry_dock.db
+
+# Block .DS_Store files on macOS
+.DS_Store
