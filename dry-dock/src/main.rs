@@ -749,6 +749,17 @@ fn load_menu(ui: &mut egui::Ui, config: &Config, active_modal: &mut ActiveModal,
         terminal_button.highlight();
     }
 
+    // Separator
+    ui.separator();
+
+    // Losing Bookmarks and having to use diff browsers is ANNOYINg.
+    // Store them all in the app and have a bookmarks manager.
+    let bookmarks_button = ui.button("Bookmarks");
+    if bookmarks_button.clicked() {
+        println!("Loading Bookmarks Manager...");
+        // *active_modal = ActiveModal::None; // Close any modals
+        // *active_screen = ActiveScreen::Feeds; // LOAD ME SCREEEEEN
+    }
 }
 
 // Load Central Panel
