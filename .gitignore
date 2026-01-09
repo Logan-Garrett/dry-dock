@@ -22,3 +22,6 @@ target
 
 # Do not Commit distribution security guideline file
 **/docs/distribution-security-guide.md
+
+# We dont want to commit the sqlite database file
+dry_dock.db
