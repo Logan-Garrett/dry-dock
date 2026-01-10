@@ -6,8 +6,8 @@ A modern personal productivity application built with Rust and egui. Manage your
 
 - **📚 Bookmarks Manager**: Save and organize your favorite web links and folder paths.
 - **📝 Notes**: Create and manage personal notes.
-- **📰 RSS Feeds**: Subscribe to and read RSS/Atom feeds.
-- **🎨 Dark Theme**: High Contrast dark mode optimized for readability.
+- **📰 RSS Feeds**: Subscribe to and see RSS/Atom feeds as they publish. (Currently only on refresh and working on a Background Task)
+- **🎨 Dark Theme**: High Contrast dark mode.
 - **💾 Local SQLite Database**: All your data stays on your machine.
 
 ## Screenshots
