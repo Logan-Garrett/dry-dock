@@ -87,8 +87,8 @@ impl NotesScreen {
         ui.separator();
         ui.add_space(Theme::SPACING_MEDIUM);
 
-        // Load notes if empty
-        if self.notes.is_empty() {
+        // Load notes if empty (but not during an active search)
+        if self.notes.is_empty() && self.search_query.trim().is_empty() {
             match NoteService::get_all_notes() {
                 Ok(notes) => {
                     self.notes = notes;
@@ -104,11 +104,21 @@ impl NotesScreen {
         if self.notes.is_empty() {
             ui.vertical_centered(|ui| {
                 ui.add_space(Theme::SPACING_XL);
-                ui.label(egui::RichText::new("Notes").size(48.0));
-                ui.add_space(Theme::SPACING_SMALL);
-                ui.label(egui::RichText::new("No notes yet").size(Theme::FONT_SIZE_SUBHEADING).color(Theme::TEXT_PRIMARY));
-                ui.add_space(Theme::SPACING_SMALL);
-                ui.label(egui::RichText::new("Click 'Create Note' to write your first note").color(Theme::TEXT_SECONDARY));
+                if !self.search_query.trim().is_empty() {
+                    // Search returned no results
+                    ui.label(egui::RichText::new("🔍").size(48.0));
+                    ui.add_space(Theme::SPACING_SMALL);
+                    ui.label(egui::RichText::new("No results found").size(Theme::FONT_SIZE_SUBHEADING).color(Theme::TEXT_PRIMARY));
+                    ui.add_space(Theme::SPACING_SMALL);
+                    ui.label(egui::RichText::new(format!("No notes match \"{}\"", self.search_query)).color(Theme::TEXT_SECONDARY));
+                } else {
+                    // No notes exist at all
+                    ui.label(egui::RichText::new("Notes").size(48.0));
+                    ui.add_space(Theme::SPACING_SMALL);
+                    ui.label(egui::RichText::new("No notes yet").size(Theme::FONT_SIZE_SUBHEADING).color(Theme::TEXT_PRIMARY));
+                    ui.add_space(Theme::SPACING_SMALL);
+                    ui.label(egui::RichText::new("Click 'Create Note' to write your first note").color(Theme::TEXT_SECONDARY));
+                }
             });
             return;
         }
@@ -128,7 +138,16 @@ impl NotesScreen {
                                     .strong()
                                     .color(Theme::TEXT_PRIMARY));
                                 ui.add_space(Theme::SPACING_SMALL);
-                                ui.label(egui::RichText::new(&note.details)
+                                
+                                // Truncate note details to 150 characters maybe more or less 
+                                // down the road but this is fine for now....
+                                let preview = if note.details.len() > 150 {
+                                    format!("{}...", &note.details[..150])
+                                } else {
+                                    note.details.clone()
+                                };
+                                
+                                ui.label(egui::RichText::new(&preview)
                                     .size(Theme::FONT_SIZE_BODY)
                                     .color(Theme::TEXT_SECONDARY));
                                 ui.add_space(Theme::SPACING_SMALL);

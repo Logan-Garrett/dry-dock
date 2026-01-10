@@ -28,6 +28,8 @@ impl Modal for UpdateBookmarkModal {
     }
 
     fn render(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut should_close = false;
+        
         // Load bookmark data on first render
         if !self.loaded {
             match BookmarksRepository::get_by_id(self.bookmark_id) {
@@ -42,8 +44,6 @@ impl Modal for UpdateBookmarkModal {
                 }
             }
         }
-
-        let mut should_close = false;
 
         Theme::apply_body_style(ui);
         

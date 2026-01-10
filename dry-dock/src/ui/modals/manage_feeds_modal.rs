@@ -16,6 +16,8 @@ impl Modal for ManageFeedsModal {
     }
     
     fn render(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut should_close = false;
+        
         // Load feeds on first render
         if !self.loaded {
             match FeedsRepository::get_all() {
@@ -29,8 +31,6 @@ impl Modal for ManageFeedsModal {
                 }
             }
         }
-
-        let mut should_close = false;
         
         Theme::apply_body_style(ui);
         

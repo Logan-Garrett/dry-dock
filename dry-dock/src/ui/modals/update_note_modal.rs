@@ -28,6 +28,8 @@ impl Modal for UpdateNoteModal {
     }
     
     fn render(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut should_close = false;
+        
         // Load note data on first render
         if !self.loaded {
             match NoteService::get_note_by_id(self.note_id) {
@@ -42,8 +44,6 @@ impl Modal for UpdateNoteModal {
                 }
             }
         }
-
-        let mut should_close = false;
         
         Theme::apply_body_style(ui);
         

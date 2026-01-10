@@ -49,11 +49,14 @@ impl ModalFactory {
     /// Render the active modal (if any)
     pub fn render(&mut self, ctx: &egui::Context) {
         if let Some((modal_type, modal)) = &mut self.active_modal {
-            // Dim background
+            // Dim background - use screen_rect for full coverage
             egui::Area::new("modal_overlay".into())
                 .fixed_pos(egui::pos2(0.0, 0.0))
+                .order(egui::Order::Middle)
+                .interactable(true)
                 .show(ctx, |ui| {
-                    let screen_rect = ctx.content_rect();
+                    let screen_rect = ctx.screen_rect();
+                    ui.allocate_space(screen_rect.size());
                     ui.painter().rect_filled(
                         screen_rect,
                         0.0,
@@ -79,6 +82,7 @@ impl ModalFactory {
                 .resizable(resizable)
                 .default_size(default_size)
                 .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .order(egui::Order::Foreground)
                 .show(ctx, |ui| {
                     should_close = modal.render(ui);
                 });
