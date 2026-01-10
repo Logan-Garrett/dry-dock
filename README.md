@@ -12,7 +12,13 @@ A modern personal productivity application built with Rust and egui. Manage your
 
 ## Screenshots
 
-![Dry Dock Home Screen](docs/images/home.png)
+![Dry Dock Home Screen](docs/images/Home_Screen.png)
+
+![Dry Dock RSS Feed Screen](docs/images/RSS_Screen.png)
+
+![Dry Dock Notes Screen](docs/images/Notes_Screen.png)
+
+![Dry Dock Bookmarks Screen](docs/images/Bookmarks_Screen.png)
 
 ## Installation
 
