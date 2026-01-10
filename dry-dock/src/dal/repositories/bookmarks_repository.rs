@@ -67,4 +67,39 @@ impl BookmarksRepository {
 
         Ok(())
     }
+
+    /// Get a bookmark by ID
+    pub fn get_by_id(bookmark_id: i32) -> Result<(i32, String, String, i64), String> {
+        let conn = get_connection()?;
+
+        let mut stmt = conn
+            .prepare("SELECT id, name, location, created_at FROM bookmarks WHERE id = ?1")
+            .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+        let bookmark = stmt
+            .query_row(params![bookmark_id], |row| {
+                Ok((
+                    row.get::<_, i32>("id")?,
+                    row.get::<_, String>("name")?,
+                    row.get::<_, String>("location")?,
+                    row.get::<_, i64>("created_at")?,
+                ))
+            })
+            .map_err(|e| format!("Failed to get bookmark: {}", e))?;
+
+        Ok(bookmark)
+    }
+
+    /// Update a bookmark
+    pub fn update(bookmark_id: i32, name: &str, location: &str) -> Result<(), String> {
+        let conn = get_connection()?;
+
+        conn.execute(
+            "UPDATE bookmarks SET name = ?1, location = ?2 WHERE id = ?3",
+            params![name, location, bookmark_id],
+        )
+        .map_err(|e| format!("Failed to update bookmark: {}", e))?;
+
+        Ok(())
+    }
 }

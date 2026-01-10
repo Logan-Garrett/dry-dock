@@ -8,5 +8,9 @@ pub enum ActiveModal {
     AddFeed,
     CreateNote,
     AddBookmark,
+    UpdateNote(i32),        // Note ID
+    UpdateBookmark(i32),    // Bookmark ID
+    ViewNote(i32),          // Note ID for viewing
+    ManageFeeds,
     Settings,
 }

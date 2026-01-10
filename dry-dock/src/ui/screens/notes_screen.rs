@@ -106,9 +106,25 @@ impl NotesScreen {
                             });
                             
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                // Delete note button
                                 if ui.add(Theme::danger_button("Delete")).clicked() {
                                     id_to_delete = Some(note.id);
                                 }
+                                
+                                ui.add_space(Theme::SPACING_SMALL);
+                                
+                                // Update note button
+                                if ui.add(Theme::primary_button("Update")).clicked() {
+                                    modal_opener(ActiveModal::UpdateNote(note.id));
+                                }
+
+                                ui.add_space(Theme::SPACING_SMALL);
+
+                                // View note button (renders markdown)
+                                if ui.add(Theme::success_button("View")).clicked() {
+                                    modal_opener(ActiveModal::ViewNote(note.id));
+                                }
+
                             });
                         });
                     });

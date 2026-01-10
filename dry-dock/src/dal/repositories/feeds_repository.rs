@@ -49,6 +49,19 @@ impl FeedsRepository {
         
         Ok(())
     }
+
+    /// Delete a feed by ID
+    pub fn delete(feed_id: i32) -> Result<(), String> {
+        let conn = get_connection()?;
+
+        conn.execute(
+            "DELETE FROM feeds WHERE id = ?1",
+            params![feed_id],
+        )
+        .map_err(|e| format!("Failed to delete feed: {}", e))?;
+
+        Ok(())
+    }
 }
 
 /// Feed Items Repository - handles feed item operations
