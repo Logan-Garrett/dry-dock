@@ -53,20 +53,18 @@ impl FeedsScreen {
         ui.separator();
         ui.add_space(Theme::SPACING_MEDIUM);
         
-        // Load feed items if empty
-        if self.feed_items.is_empty() {
-            match FeedItemsRepository::get_latest(10000) {
-                Ok(items) => {
-                    self.feed_items = items.into_iter()
-                        .map(|(id, title, link, description, pub_date)| {
-                            FeedItem::new(id, title, link, description, pub_date)
-                        })
-                        .collect();
-                }
-                Err(e) => {
-                    ui.colored_label(Theme::DANGER_COLOR, format!("Error loading feed items: {}", e));
-                    return;
-                }
+        // Always reload feed items from database to get latest updates
+        match FeedItemsRepository::get_latest(10000) {
+            Ok(items) => {
+                self.feed_items = items.into_iter()
+                    .map(|(id, title, link, description, pub_date)| {
+                        FeedItem::new(id, title, link, description, pub_date)
+                    })
+                    .collect();
+            }
+            Err(e) => {
+                ui.colored_label(Theme::DANGER_COLOR, format!("Error loading feed items: {}", e));
+                return;
             }
         }
 
@@ -112,7 +110,12 @@ impl FeedsScreen {
                             
                             // Show truncated description
                             let desc = if item.description.len() > 300 {
-                                format!("{}...", &item.description[..300])
+                                // Find a valid UTF-8 boundary at or before position 300
+                                let mut end = 300.min(item.description.len());
+                                while end > 0 && !item.description.is_char_boundary(end) {
+                                    end -= 1;
+                                }
+                                format!("{}...", &item.description[..end])
                             } else {
                                 item.description.clone()
                             };

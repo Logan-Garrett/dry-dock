@@ -11,11 +11,19 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
 
     ui.menu_button(&config.app_name, |ui| {
         let settings_button = Theme::button("Settings");
+        let logs_button = Theme::button("View Logs");
         let exit_button = Theme::button("Exit");
         
         if ui.add(settings_button).clicked() {
             println!("Loading Settings...");
             state.open_modal(ActiveModal::Settings);
+        }
+
+        if ui.add(logs_button).clicked() {
+            println!("Opening Logs Directory...");
+            // Need to create a modal and either store in sqllite or a file.
+            // Need to add a Log service to call instead of println as well as
+            // Need a verbose flaf in the config or settings whatever it may be.
         }
         
         if ui.add(exit_button).clicked() {

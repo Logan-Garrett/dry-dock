@@ -35,7 +35,7 @@ impl DryDockApp {
         cc.egui_ctx.set_style(style);
         
         Self { 
-            state: AppState::new(config),
+            state: AppState::new(config, cc.egui_ctx.clone()),
         }
     }
 }
