@@ -19,11 +19,6 @@ pub fn get_database_path(app_name: &str) -> String {
     path.to_string_lossy().to_string()
 }
 
-// Helper to get the current timestamp as a string
-pub fn current_timestamp() -> String {
-    chrono::Utc::now().to_rfc3339()
-}
-
 pub fn load_config_file() -> Result<String, std::io::Error> {
     // Try 1: Current directory (for development)
     if let Ok(data) = std::fs::read_to_string("AppConfig.json") {
