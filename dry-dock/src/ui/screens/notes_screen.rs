@@ -9,6 +9,7 @@ use crate::ui::styles::Theme;
 #[derive(Default)]
 pub struct NotesScreen {
     notes: Vec<Note>,
+    search_query: String,
 }
 
 impl Screen for NotesScreen {
@@ -33,12 +34,50 @@ impl NotesScreen {
             }
 
             if ui.add(Theme::button("Refresh")).clicked() {
+                self.search_query.clear();
                 match NoteService::get_all_notes() {
                     Ok(notes) => {
                         self.notes = notes;
                     }
                     Err(e) => {
                         println!("Error refreshing notes: {}", e);
+                    }
+                }
+            }
+        });
+        
+        ui.add_space(Theme::SPACING_MEDIUM);
+
+        // Search field
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("Search:").color(Theme::TEXT_PRIMARY));
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut self.search_query)
+                    .hint_text("Search by title or content...")
+                    .desired_width(ui.available_width())
+            );
+
+            // Trigger search when text changes
+            if response.changed() {
+                if self.search_query.trim().is_empty() {
+                    // Show all notes when search is empty
+                    match NoteService::get_all_notes() {
+                        Ok(notes) => {
+                            self.notes = notes;
+                        }
+                        Err(e) => {
+                            println!("Error loading notes: {}", e);
+                        }
+                    }
+                } else {
+                    // Search notes
+                    match NoteService::search_notes(&self.search_query) {
+                        Ok(notes) => {
+                            self.notes = notes;
+                        }
+                        Err(e) => {
+                            println!("Error searching notes: {}", e);
+                        }
                     }
                 }
             }
