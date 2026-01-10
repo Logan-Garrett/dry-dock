@@ -1,3 +1,5 @@
+use eframe::egui;
+
 // src/app/app_state.rs
 use crate::models::Config;
 use crate::app::ActiveScreen;
@@ -16,9 +18,9 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config) -> Self {
-        // Start background services
-        BackgroundServiceManager::start_rss_reloader();
+    pub fn new(config: Config, ctx: egui::Context) -> Self {        
+        // Start background services with the context
+        BackgroundServiceManager::start_rss_reloader(ctx);
 
         Self {
             config,
@@ -54,7 +56,7 @@ pub struct BackgroundServiceManager {
 }
 
 impl BackgroundServiceManager {
-    pub fn start_rss_reloader() -> () {
+    pub fn start_rss_reloader(ctx: egui::Context) -> () {
         std::thread::spawn(move || {
             println!("RSS Reloader background service started. Will refresh every 5 minutes.");
             
@@ -66,6 +68,9 @@ impl BackgroundServiceManager {
                 match refresh_all_feeds() {
                     Ok(items_added) => {
                         println!("RSS Feeds refreshed, {} new items added.", items_added);
+                        println!("Requesting UI repaint...");
+                        ctx.request_repaint();
+                        println!("UI repaint requested");
                     },
                     Err(e) => {
                         eprintln!("Error refreshing RSS feeds: {}", e);
@@ -73,5 +78,15 @@ impl BackgroundServiceManager {
                 }
             }
         });
+    }
+
+    pub fn start_daily_backup() -> () {
+        // Placeholder for future daily backup service
+        // Allow a user to configure a backup locatio to ship this to???
+    }
+
+    pub fn start_daily_assitant_message_backup_scraper() -> () {
+        // Placeholder for future daily assistant message backup scraper
+        // Scans DB and loads into a JSON blog single log and wips the other messages for a new day.
     }
 }
