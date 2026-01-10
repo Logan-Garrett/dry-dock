@@ -6,11 +6,12 @@ use crate::ui::screens::*;
 use crate::ui::modals::ActiveModal;
 
 /// Type alias for screen trait objects
-type BoxedScreen = Box<dyn ScreenRenderer>;
+type BoxedScreen = Box<dyn ScreenRenderer + Send>;
 
 /// Trait for screens that can be rendered dynamically
-pub trait ScreenRenderer {
+pub trait ScreenRenderer: Send {
     fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal));
+    fn clear_for_reload(&mut self);
 }
 
 /// Wrapper for FeedsScreen to implement ScreenRenderer
@@ -19,6 +20,10 @@ struct FeedsScreenWrapper(FeedsScreen);
 impl ScreenRenderer for FeedsScreenWrapper {
     fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
         self.0.render(ui, modal_opener);
+    }
+
+    fn clear_for_reload(&mut self) {
+        self.0.clear_for_reload();
     }
 }
 
@@ -29,6 +34,10 @@ impl ScreenRenderer for NotesScreenWrapper {
     fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
         self.0.render(ui, modal_opener);
     }
+
+    fn clear_for_reload(&mut self) {
+        self.0.clear_for_reload();
+    }
 }
 
 /// Wrapper for BookmarksScreen to implement ScreenRenderer
@@ -37,6 +46,10 @@ struct BookmarksScreenWrapper(BookmarksScreen);
 impl ScreenRenderer for BookmarksScreenWrapper {
     fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
         self.0.render(ui, modal_opener);
+    }
+
+    fn clear_for_reload(&mut self) {
+        self.0.clear_for_reload();
     }
 }
 
@@ -79,6 +92,13 @@ impl ScreenFactory {
     /// Get the current active screen
     pub fn get_active_screen(&self) -> ActiveScreen {
         self.current_screen.clone()
+    }
+
+    /// Clear a specific screen to force reload on next render
+    pub fn clear_screen(&mut self, screen: ActiveScreen) {
+        if let Some(screen_obj) = self.screens.get_mut(&screen) {
+            screen_obj.clear_for_reload();
+        }
     }
 
     /// Render the active screen

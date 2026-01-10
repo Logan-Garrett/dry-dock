@@ -10,6 +10,7 @@ use crate::ui::styles::Theme;
 #[derive(Default)]
 pub struct FeedsScreen {
     feed_items: Vec<FeedItem>,
+    loaded: bool,
 }
 
 impl Screen for FeedsScreen {
@@ -19,6 +20,11 @@ impl Screen for FeedsScreen {
 }
 
 impl FeedsScreen {
+    /// Clear loaded state to force reload on next render
+    pub fn clear_for_reload(&mut self) {
+        self.loaded = false;
+    }
+
     pub fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
         Theme::apply_body_style(ui);
         
@@ -40,7 +46,7 @@ impl FeedsScreen {
                     Ok(msg) => println!("{}", msg),
                     Err(e) => println!("Error refreshing feeds: {}", e),
                 }
-                self.feed_items.clear();
+                self.loaded = false;
             }
 
             // Manage Feeds Button
@@ -53,18 +59,21 @@ impl FeedsScreen {
         ui.separator();
         ui.add_space(Theme::SPACING_MEDIUM);
         
-        // Always reload feed items from database to get latest updates
-        match FeedItemsRepository::get_latest(10000) {
-            Ok(items) => {
-                self.feed_items = items.into_iter()
-                    .map(|(id, title, link, description, pub_date)| {
-                        FeedItem::new(id, title, link, description, pub_date)
-                    })
-                    .collect();
-            }
-            Err(e) => {
-                ui.colored_label(Theme::DANGER_COLOR, format!("Error loading feed items: {}", e));
-                return;
+        // Load feed items only when not yet loaded
+        if !self.loaded {
+            match FeedItemsRepository::get_latest(10000) {
+                Ok(items) => {
+                    self.feed_items = items.into_iter()
+                        .map(|(id, title, link, description, pub_date)| {
+                            FeedItem::new(id, title, link, description, pub_date)
+                        })
+                        .collect();
+                    self.loaded = true;
+                }
+                Err(e) => {
+                    ui.colored_label(Theme::DANGER_COLOR, format!("Error loading feed items: {}", e));
+                    return;
+                }
             }
         }
 

@@ -1,4 +1,5 @@
 use eframe::egui;
+use std::sync::{Arc, Mutex};
 
 // src/app/app_state.rs
 use crate::models::Config;
@@ -14,18 +15,22 @@ pub struct AppState {
     pub modal_factory: ModalFactory,
     
     // Screen factory for dynamic screen management
-    pub screen_factory: ScreenFactory,
+    pub screen_factory: Arc<Mutex<ScreenFactory>>,
 }
 
 impl AppState {
-    pub fn new(config: Config, ctx: egui::Context) -> Self {        
-        // Start background services with the context
-        BackgroundServiceManager::start_rss_reloader(ctx);
+    pub fn new(config: Config) -> Self {        
+        // Prep
+        let screen_factory = Arc::new(Mutex::new(ScreenFactory::new()));
+        
+        // Start background services with the context and screen factory reference so I can handle UI updates
+        // whenever I so please. Models I dont care about and maybe the access to services.
+        BackgroundServiceManager::start_rss_reloader(screen_factory.clone());
 
         Self {
             config,
             modal_factory: ModalFactory::new(),
-            screen_factory: ScreenFactory::new(),
+            screen_factory,
         }
     }
     
@@ -41,12 +46,16 @@ impl AppState {
     
     /// Set the active screen
     pub fn set_active_screen(&mut self, screen: ActiveScreen) {
-        self.screen_factory.set_active_screen(screen);
+        if let Ok(mut factory) = self.screen_factory.lock() {
+            factory.set_active_screen(screen);
+        }
     }
     
     /// Get the active screen
     pub fn get_active_screen(&self) -> ActiveScreen {
-        self.screen_factory.get_active_screen()
+        self.screen_factory.lock()
+            .map(|factory| factory.get_active_screen())
+            .unwrap_or(ActiveScreen::None)
     }
 }
 
@@ -56,7 +65,7 @@ pub struct BackgroundServiceManager {
 }
 
 impl BackgroundServiceManager {
-    pub fn start_rss_reloader(ctx: egui::Context) -> () {
+    pub fn start_rss_reloader(screen_factory: Arc<Mutex<ScreenFactory>>) -> () {
         std::thread::spawn(move || {
             println!("RSS Reloader background service started. Will refresh every 5 minutes.");
             
@@ -68,9 +77,12 @@ impl BackgroundServiceManager {
                 match refresh_all_feeds() {
                     Ok(items_added) => {
                         println!("RSS Feeds refreshed, {} new items added.", items_added);
-                        println!("Requesting UI repaint...");
-                        ctx.request_repaint();
-                        println!("UI repaint requested");
+                        
+                        // Clear the feeds screen to trigger reload on next render
+                        if let Ok(mut factory) = screen_factory.lock() {
+                            factory.clear_screen(ActiveScreen::Feeds);
+                            println!("Feeds screen cleared, will reload on next render");
+                        }
                     },
                     Err(e) => {
                         eprintln!("Error refreshing RSS feeds: {}", e);

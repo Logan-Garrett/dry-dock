@@ -7,6 +7,9 @@ impl AppState {
         let mut modal_opener = |modal_type| {
             self.modal_factory.open_modal(modal_type);
         };
-        self.screen_factory.render(ctx, &mut modal_opener);
+        
+        if let Ok(mut factory) = self.screen_factory.lock() {
+            factory.render(ctx, &mut modal_opener);
+        }
     }
 }
