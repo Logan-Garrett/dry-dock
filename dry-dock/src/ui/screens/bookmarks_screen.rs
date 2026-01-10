@@ -8,11 +8,17 @@ use crate::ui::styles::Theme;
 #[derive(Default)]
 pub struct BookmarksScreen {
     bookmarks: Vec<Bookmark>,
+    loaded: bool,
 }
 
 impl BookmarksScreen {
     pub fn title(&self) -> &str {
         "Bookmarks Manager"
+    }
+
+    /// Clear loaded state to force reload on next render
+    pub fn clear_for_reload(&mut self) {
+        self.loaded = false;
     }
 
     pub fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
@@ -28,12 +34,11 @@ impl BookmarksScreen {
             // Create Add Bookmark Button
             if ui.add(Theme::primary_button("Add Bookmark")).clicked() {
                 modal_opener(ActiveModal::AddBookmark);
-                self.bookmarks.clear();
             }
 
             // Create Refresh Button
             if ui.add(Theme::button("Refresh")).clicked() {
-                self.bookmarks.clear();
+                self.loaded = false;
             }
         });
 
@@ -41,8 +46,8 @@ impl BookmarksScreen {
         ui.separator();
         ui.add_space(Theme::SPACING_MEDIUM);
         
-        // Load bookmarks if empty
-        if self.bookmarks.is_empty() {
+        // Load bookmarks only when not yet loaded
+        if !self.loaded {
             match bookmark_service::fetch_all_bookmarks() {
                 Ok(bookmarks) => {
                     self.bookmarks = bookmarks.into_iter()
@@ -50,6 +55,7 @@ impl BookmarksScreen {
                             Bookmark::new(id, name, path, created_at)
                         })
                         .collect();
+                    self.loaded = true;
                 }
                 Err(e) => {
                     ui.colored_label(Theme::DANGER_COLOR, format!("Error loading bookmarks: {}", e));
@@ -127,7 +133,6 @@ impl BookmarksScreen {
                 Ok(_) => {
                     println!("Bookmark deleted successfully.");
                     self.bookmarks.retain(|bm| bm.id != id);
-                    self.bookmarks.clear();
                 }
                 Err(e) => {
                     println!("Error deleting bookmark: {}", e);

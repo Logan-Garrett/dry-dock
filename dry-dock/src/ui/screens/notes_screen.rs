@@ -10,6 +10,7 @@ use crate::ui::styles::Theme;
 pub struct NotesScreen {
     notes: Vec<Note>,
     search_query: String,
+    loaded: bool,
 }
 
 impl Screen for NotesScreen {
@@ -19,6 +20,11 @@ impl Screen for NotesScreen {
 }
 
 impl NotesScreen {
+    /// Clear loaded state to force reload on next render
+    pub fn clear_for_reload(&mut self) {
+        self.loaded = false;
+    }
+
     pub fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
         Theme::apply_body_style(ui);
         
@@ -35,14 +41,7 @@ impl NotesScreen {
 
             if ui.add(Theme::button("Refresh")).clicked() {
                 self.search_query.clear();
-                match NoteService::get_all_notes() {
-                    Ok(notes) => {
-                        self.notes = notes;
-                    }
-                    Err(e) => {
-                        println!("Error refreshing notes: {}", e);
-                    }
-                }
+                self.loaded = false;
             }
         });
         
@@ -60,15 +59,8 @@ impl NotesScreen {
             // Trigger search when text changes
             if response.changed() {
                 if self.search_query.trim().is_empty() {
-                    // Show all notes when search is empty
-                    match NoteService::get_all_notes() {
-                        Ok(notes) => {
-                            self.notes = notes;
-                        }
-                        Err(e) => {
-                            println!("Error loading notes: {}", e);
-                        }
-                    }
+                    // Show all notes when search is empty - trigger reload
+                    self.loaded = false;
                 } else {
                     // Search notes
                     match NoteService::search_notes(&self.search_query) {
@@ -87,11 +79,12 @@ impl NotesScreen {
         ui.separator();
         ui.add_space(Theme::SPACING_MEDIUM);
 
-        // Load notes if empty (but not during an active search)
-        if self.notes.is_empty() && self.search_query.trim().is_empty() {
+        // Load notes only when not yet loaded and no active search
+        if !self.loaded && self.search_query.trim().is_empty() {
             match NoteService::get_all_notes() {
                 Ok(notes) => {
                     self.notes = notes;
+                    self.loaded = true;
                 }
                 Err(e) => {
                     ui.colored_label(Theme::DANGER_COLOR, format!("Error loading notes: {}", e));
@@ -195,7 +188,6 @@ impl NotesScreen {
                 Ok(_) => {
                     println!("Note deleted successfully.");
                     self.notes.retain(|note| note.id != id);
-                    self.notes.clear();
                 }
                 Err(e) => {
                     println!("Error deleting note: {}", e);
