@@ -57,4 +57,41 @@ impl NotesRepository {
 
         Ok(notes)
     }
+
+    /// Get a note by ID
+    pub fn get_by_id(note_id: i32) -> Result<(i32, String, String, i64, Option<i64>), String> {
+        let conn = get_connection()?;
+
+        let mut stmt = conn
+            .prepare("SELECT id, title, details, created_at, updated_at FROM notes WHERE id = ?1")
+            .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+        let note = stmt
+            .query_row(params![note_id], |row| {
+                Ok((
+                    row.get::<_, i32>("id")?,
+                    row.get::<_, String>("title")?,
+                    row.get::<_, String>("details")?,
+                    row.get::<_, i64>("created_at")?,
+                    row.get::<_, Option<i64>>("updated_at")?,
+                ))
+            })
+            .map_err(|e| format!("Failed to get note: {}", e))?;
+
+        Ok(note)
+    }
+
+    /// Update a note
+    pub fn update(note_id: i32, title: &str, details: &str) -> Result<(), String> {
+        let conn = get_connection()?;
+        let now = chrono::Utc::now().timestamp();
+
+        conn.execute(
+            "UPDATE notes SET title = ?1, details = ?2, updated_at = ?3 WHERE id = ?4",
+            params![title, details, now, note_id],
+        )
+        .map_err(|e| format!("Failed to update note: {}", e))?;
+
+        Ok(())
+    }
 }

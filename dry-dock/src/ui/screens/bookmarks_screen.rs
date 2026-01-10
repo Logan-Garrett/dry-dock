@@ -108,6 +108,13 @@ impl BookmarksScreen {
                                 if ui.add(Theme::success_button("Open")).clicked() {
                                     bookmark_service::open_bookmark_path(&bookmark.path);
                                 }
+
+                                ui.add_space(Theme::SPACING_SMALL);
+
+                                // Update bookmark button
+                                if ui.add(Theme::primary_button("Update")).clicked() {
+                                    modal_opener(ActiveModal::UpdateBookmark(bookmark.id));
+                                }
                             });
                         });
                     });

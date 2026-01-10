@@ -30,6 +30,10 @@ impl ModalFactory {
             ActiveModal::AddFeed => Box::new(AddFeedModal::default()),
             ActiveModal::CreateNote => Box::new(CreateNoteModal::default()),
             ActiveModal::AddBookmark => Box::new(AddBookmarkModal::default()),
+            ActiveModal::ManageFeeds => Box::new(ManageFeedsModal::default()),
+            ActiveModal::UpdateBookmark(id) => Box::new(UpdateBookmarkModal::new(id)),
+            ActiveModal::UpdateNote(id) => Box::new(UpdateNoteModal::new(id)),
+            ActiveModal::ViewNote(id) => Box::new(ViewNoteModal::new(id)),
             ActiveModal::Settings => Box::new(SettingsModal),
             ActiveModal::None => return,
         };
@@ -63,6 +67,9 @@ impl ModalFactory {
 
             let (default_size, resizable) = match modal_type {
                 ActiveModal::CreateNote => ([800.0, 600.0], true),
+                ActiveModal::UpdateNote(_) => ([800.0, 600.0], true),
+                ActiveModal::ViewNote(_) => ([900.0, 700.0], true),
+                ActiveModal::ManageFeeds => ([600.0, 500.0], true),
                 ActiveModal::Settings => ([600.0, 400.0], true),
                 _ => ([400.0, 300.0], false),
             };

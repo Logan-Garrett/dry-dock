@@ -63,4 +63,25 @@ impl NoteService {
         
         Ok(filtered)
     }
+
+    /// Get a note by ID
+    pub fn get_note_by_id(note_id: i32) -> Result<Note, String> {
+        let (id, title, details, created_at, updated_at) = NotesRepository::get_by_id(note_id)?;
+        Ok(Note::new(id, title, details, created_at, updated_at))
+    }
+
+    /// Update a note
+    pub fn update_note(note_id: i32, title: &str, details: &str) -> Result<(), String> {
+        // BLL: Validate inputs
+        if title.trim().is_empty() {
+            return Err("Note title cannot be empty".to_string());
+        }
+        
+        if details.trim().is_empty() {
+            return Err("Note details cannot be empty".to_string());
+        }
+        
+        // Delegate to repository
+        NotesRepository::update(note_id, title, details)
+    }
 }

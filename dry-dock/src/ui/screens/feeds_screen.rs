@@ -29,16 +29,23 @@ impl FeedsScreen {
         
         // Action buttons row
         ui.horizontal(|ui| {
+            // Add Feed Button
             if ui.add(Theme::primary_button("Add RSS Feed")).clicked() {
                 modal_opener(ActiveModal::AddFeed);
             }
 
+            // Refresh All Button
             if ui.add(Theme::success_button("Refresh All")).clicked() {
                 match rss_service::refresh_all_feeds() {
                     Ok(msg) => println!("{}", msg),
                     Err(e) => println!("Error refreshing feeds: {}", e),
                 }
                 self.feed_items.clear();
+            }
+
+            // Manage Feeds Button
+            if ui.add(Theme::button("Manage Feeds")).clicked() {
+                modal_opener(ActiveModal::ManageFeeds);
             }
         });
         
