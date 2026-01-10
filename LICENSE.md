@@ -8,8 +8,7 @@
 
 This software ("Dry Dock") is proprietary software owned by Logan Garrett ("the Author"). Use of this software is permitted only under the following conditions:
 
-- **Authorization Required**: You may use this software free of charge but are not allowed to sell it.
-At any time future versions may require payment.
+- **Author Statement**: You may use this software free of charge but are not allowed to sell it.
 
 ### 2. Restrictions
 
