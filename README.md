@@ -122,7 +122,7 @@ This project is licensed under a Custom License - see the [LICENSE.md](LICENSE.m
 
 **Logan Garrett**
 
-- GitHub: [@logangarrett03](https://github.com/logangarrett03)
+- GitHub: [@logan-garrett](https://github.com/logan-garrett)
 
 ---
 
