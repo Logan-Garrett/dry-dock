@@ -3,6 +3,7 @@ use crate::models::Config;
 use crate::app::ActiveScreen;
 use crate::ui::modals::*;
 use crate::ui::screens::ScreenFactory;
+use crate::services::rss_service::refresh_all_feeds;
 
 pub struct AppState {
     pub config: Config,
@@ -16,6 +17,9 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(config: Config) -> Self {
+        // Start background services
+        BackgroundServiceManager::start_rss_reloader();
+
         Self {
             config,
             modal_factory: ModalFactory::new(),
@@ -41,5 +45,33 @@ impl AppState {
     /// Get the active screen
     pub fn get_active_screen(&self) -> ActiveScreen {
         self.screen_factory.get_active_screen()
+    }
+}
+
+/// Background Service Manager for handling background tasks
+pub struct BackgroundServiceManager {
+    // None as of now.
+}
+
+impl BackgroundServiceManager {
+    pub fn start_rss_reloader() -> () {
+        std::thread::spawn(move || {
+            println!("RSS Reloader background service started. Will refresh every 5 minutes.");
+            
+            loop {
+                // Wait 5 minutes
+                std::thread::sleep(std::time::Duration::from_secs(300));
+                
+                // Refresh feeds
+                match refresh_all_feeds() {
+                    Ok(items_added) => {
+                        println!("RSS Feeds refreshed, {} new items added.", items_added);
+                    },
+                    Err(e) => {
+                        eprintln!("Error refreshing RSS feeds: {}", e);
+                    }
+                }
+            }
+        });
     }
 }
