@@ -66,11 +66,11 @@ impl eframe::App for DryDockApp {
             });
         });
 
-        // Render active modal (if any)
-        self.state.render_active_modal(ctx);
-
         // Render active screen (if any)
         self.state.render_active_screen(ctx);
+
+        // Render active modal (if any)
+        self.state.render_active_modal(ctx);
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
