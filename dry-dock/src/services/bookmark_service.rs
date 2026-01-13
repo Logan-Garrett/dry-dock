@@ -6,6 +6,7 @@
 // With url and file path we own the folder or the actual file.
 
 use crate::dal::BookmarksRepository;
+use super::log_service;
 
 /////
 /// BLL Functions for Bookmark Management
@@ -28,18 +29,18 @@ pub fn open_bookmark_path(path: &str) {
     if path.starts_with("http://") || path.starts_with("https://") {
         // Open URL in default browser
         if let Err(e) = webbrowser::open(path) {
-            println!("Failed to open URL: {}", e);
+            log_service::add_log_entry("ERROR", &format!("Failed to open URL: {}", e));
         } else {
-            println!("Opening URL: {}", path);
+            log_service::add_log_entry("INFO", &format!("Opening URL: {}", path));
         }
     } else if std::path::Path::new(path).exists() {
-        // Open file path with default application
+        // Open file/folder path
         if let Err(e) = opener::open(path) {
-            println!("Failed to open file path: {}", e);
+            log_service::add_log_entry("ERROR", &format!("Failed to open file path: {}", e));
         } else {
-            println!("Opening file: {}", path);
+            log_service::add_log_entry("INFO", &format!("Opening file: {}", path));
         }
     } else {
-        println!("Path does not exist: {}", path);
+        log_service::add_log_entry("ERROR", &format!("Path does not exist: {}", path));
     }
 }

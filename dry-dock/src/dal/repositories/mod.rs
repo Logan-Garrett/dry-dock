@@ -2,7 +2,9 @@
 pub mod notes_repository;
 pub mod feeds_repository;
 pub mod bookmarks_repository;
+pub mod logs_repository;
 
 pub use notes_repository::NotesRepository;
 pub use feeds_repository::{FeedsRepository, FeedItemsRepository};
 pub use bookmarks_repository::BookmarksRepository;
+pub use logs_repository::LogsRepository;

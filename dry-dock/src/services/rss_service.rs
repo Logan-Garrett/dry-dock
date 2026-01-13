@@ -1,21 +1,23 @@
 use crate::dal::{FeedsRepository, FeedItemsRepository};
 use chrono::{DateTime, Utc};
+use super::log_service;
 
 pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, String> {
     // Trim and validate URL
     let mut feed_url = feed_url.trim().to_string();
     
     if feed_url.is_empty() {
+        log_service::add_log_entry("ERROR", "Feed URL is empty");
         return Err("Feed URL is empty".to_string());
     }
     
     // Auto-fix URLs missing protocol - prepend https://
     if !feed_url.starts_with("http://") && !feed_url.starts_with("https://") {
-        println!("URL missing protocol, adding https:// to: {}", feed_url);
+        log_service::add_log_entry("INFO", &format!("URL missing protocol, adding https:// to: {}", feed_url));
         feed_url = format!("https://{}", feed_url);
     }
     
-    println!("Fetching feed from: {}", feed_url);
+    log_service::add_log_entry("INFO", &format!("Fetching feed from: {}", feed_url));
     
     // Create a client with proper configuration
     let client = reqwest::blocking::Client::builder()
@@ -31,6 +33,7 @@ pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, Strin
         .map_err(|e| format!("Failed to fetch feed from '{}': {}", feed_url, e))?;
     
     if !response.status().is_success() {
+        log_service::add_log_entry("ERROR", &format!("HTTP error {} for URL: {}", response.status(), feed_url));
         return Err(format!("HTTP error: {} for URL: {}", response.status(), feed_url));
     }
     
@@ -43,6 +46,7 @@ pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, Strin
     } else if let Ok(items) = parse_atom(&content) {
         store_feed_items(feed_id, items)?
     } else {
+        log_service::add_log_entry("ERROR", &format!("Failed to parse feed content from URL: {}", feed_url));
         return Err("Failed to parse feed as RSS or Atom".to_string());
     };
     
@@ -158,7 +162,7 @@ fn store_feed_items(feed_id: i32, items: Vec<FeedItem>) -> Result<usize, String>
         ) {
             Ok(true) => items_added += 1,  // Successfully inserted
             Ok(false) => {},                // Already exists, ignored
-            Err(e) => eprintln!("Failed to insert feed item: {}", e),
+            Err(e) => log_service::add_log_entry("ERROR", &format!("Failed to insert feed item: {}", e)),
         }
     }
     
@@ -169,20 +173,20 @@ pub fn refresh_all_feeds() -> Result<String, String> {
     // Get all feeds from repository
     let feeds = FeedsRepository::get_all()?;
     
-    println!("Found {} feeds to refresh", feeds.len());
+    log_service::add_log_entry("INFO", &format!("Found {} feeds to refresh", feeds.len()));
     
     let mut total_items = 0;
     let mut errors = Vec::new();
     
     for (feed_id, feed_url, feed_title) in feeds {
-        println!("Processing feed {}: {} ({})", feed_id, feed_title, feed_url);
+        log_service::add_log_entry("INFO", &format!("Processing feed {}: {} ({})", feed_id, feed_title, feed_url));
         match fetch_and_store_feed(feed_id, &feed_url) {
             Ok(count) => {
-                println!("Feed {} ({}): Added {} items", feed_id, feed_title, count);
+                log_service::add_log_entry("INFO", &format!("Feed {} ({}): Added {} items", feed_id, feed_title, count));
                 total_items += count;
             },
             Err(e) => {
-                eprintln!("Feed {} ({}) error: {}", feed_id, feed_title, e);
+                log_service::add_log_entry("ERROR", &format!("Feed {} ({}) error: {}", feed_id, feed_title, e));
                 errors.push(format!("{}: {}", feed_title, e));
             }
         }

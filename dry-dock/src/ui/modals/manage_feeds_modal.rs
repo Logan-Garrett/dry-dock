@@ -3,6 +3,7 @@ use eframe::egui;
 use crate::ui::modals::modal_trait::Modal;
 use crate::dal::FeedsRepository;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 #[derive(Default)]
 pub struct ManageFeedsModal {
@@ -88,11 +89,11 @@ impl Modal for ManageFeedsModal {
         if let Some(id) = id_to_delete {
             match FeedsRepository::delete(id) {
                 Ok(_) => {
-                    println!("Feed deleted successfully.");
+                    log_service::add_log_entry("INFO", "Feed deleted successfully.");
                     self.feeds.retain(|(feed_id, _, _)| *feed_id != id);
                 }
                 Err(e) => {
-                    println!("Error deleting feed: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error deleting feed: {}", e));
                 }
             }
         }

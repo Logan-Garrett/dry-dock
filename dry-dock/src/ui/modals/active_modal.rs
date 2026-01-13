@@ -11,6 +11,7 @@ pub enum ActiveModal {
     UpdateNote(i32),        // Note ID
     UpdateBookmark(i32),    // Bookmark ID
     ViewNote(i32),          // Note ID for viewing
+    LogModal,
     ManageFeeds,
     Settings,
 }

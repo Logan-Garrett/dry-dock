@@ -4,6 +4,7 @@ use crate::services::bookmark_service;
 use crate::models::Bookmark;
 use crate::ui::modals::ActiveModal;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 #[derive(Default)]
 pub struct BookmarksScreen {
@@ -131,11 +132,11 @@ impl BookmarksScreen {
         if let Some(id) = id_to_delete {
             match bookmark_service::delete_bookmark(id) {
                 Ok(_) => {
-                    println!("Bookmark deleted successfully.");
+                    log_service::add_log_entry("INFO", "Bookmark deleted successfully.");
                     self.bookmarks.retain(|bm| bm.id != id);
                 }
                 Err(e) => {
-                    println!("Error deleting bookmark: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error deleting bookmark: {}", e));
                 }
             }
         }

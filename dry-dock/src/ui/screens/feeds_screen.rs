@@ -6,6 +6,7 @@ use crate::services::rss_service;
 use crate::models::FeedItem;
 use crate::ui::modals::ActiveModal;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 #[derive(Default)]
 pub struct FeedsScreen {
@@ -43,8 +44,8 @@ impl FeedsScreen {
             // Refresh All Button
             if ui.add(Theme::success_button("Refresh All")).clicked() {
                 match rss_service::refresh_all_feeds() {
-                    Ok(msg) => println!("{}", msg),
-                    Err(e) => println!("Error refreshing feeds: {}", e),
+                    Ok(msg) => log_service::add_log_entry("INFO", &msg),
+                    Err(e) => log_service::add_log_entry("ERROR", &format!("Error refreshing feeds: {}", e)),
                 }
                 self.loaded = false;
             }
@@ -71,6 +72,7 @@ impl FeedsScreen {
                     self.loaded = true;
                 }
                 Err(e) => {
+                    log_service::add_log_entry("ERROR", &format!("Error loading feed items: {}", e));
                     ui.colored_label(Theme::DANGER_COLOR, format!("Error loading feed items: {}", e));
                     return;
                 }

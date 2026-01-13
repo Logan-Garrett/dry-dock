@@ -3,6 +3,7 @@ use eframe::egui;
 use crate::ui::modals::modal_trait::Modal;
 use crate::dal::BookmarksRepository;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 pub struct UpdateBookmarkModal {
     bookmark_id: i32,
@@ -72,7 +73,7 @@ impl Modal for UpdateBookmarkModal {
         ui.horizontal(|ui| {
             if ui.add(Theme::primary_button("Update Bookmark")).clicked() {
                 if let Err(e) = BookmarksRepository::update(self.bookmark_id, &self.name, &self.location) {
-                    println!("Error updating bookmark: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error updating bookmark: {}", e));
                 }
                 should_close = true;
             }

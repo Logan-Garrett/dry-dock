@@ -117,6 +117,16 @@ fn run_migrations() -> Result<(), String> {
         );
 
         CREATE INDEX IF NOT EXISTS idx_bookmarks_name ON bookmarks(name);
+
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            level TEXT NOT NULL,
+            message TEXT NOT NULL,
+            timestamp INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp DESC);
+        CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
         "
     )
     .map_err(|e| format!("Failed to run migrations: {}", e))?;

@@ -2,6 +2,7 @@
 use eframe::egui;
 use crate::ui::modals::modal_trait::Modal;
 use crate::services::bookmark_service;
+use crate::services::log_service;
 use crate::ui::styles::Theme;
 
 #[derive(Default)]
@@ -45,7 +46,7 @@ impl Modal for AddBookmarkModal {
         ui.horizontal(|ui| {
             if ui.add(Theme::primary_button("Add Bookmark")).clicked() {
                 if let Err(e) = bookmark_service::add_new_bookmark(&self.name, &self.location) {
-                    println!("Error adding bookmark: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error adding bookmark: {}", e));
                 }
                 should_close = true;
             }

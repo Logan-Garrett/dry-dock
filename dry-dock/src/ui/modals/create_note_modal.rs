@@ -2,6 +2,7 @@
 use eframe::egui;
 use crate::ui::modals::modal_trait::Modal;
 use crate::services::NoteService;
+use crate::services::log_service;
 use crate::ui::styles::Theme;
 
 #[derive(Default)]

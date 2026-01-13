@@ -8,6 +8,7 @@ pub mod update_note_modal;
 pub mod update_bookmark_modal;
 pub mod view_note_modal;
 pub mod manage_feeds_modal;
+pub mod log_modal;
 pub mod settings_modal;
 pub mod modal_factory;
 
@@ -22,3 +23,4 @@ pub use view_note_modal::ViewNoteModal;
 pub use manage_feeds_modal::ManageFeedsModal;
 pub use settings_modal::SettingsModal;
 pub use modal_factory::ModalFactory;
+pub use log_modal::LogModal;

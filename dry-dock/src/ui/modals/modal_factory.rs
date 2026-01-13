@@ -34,6 +34,7 @@ impl ModalFactory {
             ActiveModal::UpdateBookmark(id) => Box::new(UpdateBookmarkModal::new(id)),
             ActiveModal::UpdateNote(id) => Box::new(UpdateNoteModal::new(id)),
             ActiveModal::ViewNote(id) => Box::new(ViewNoteModal::new(id)),
+            ActiveModal::LogModal => Box::new(LogModal::default()),
             ActiveModal::Settings => Box::new(SettingsModal),
             ActiveModal::None => return,
         };
@@ -73,6 +74,7 @@ impl ModalFactory {
                 ActiveModal::UpdateNote(_) => ([800.0, 600.0], true),
                 ActiveModal::ViewNote(_) => ([900.0, 700.0], true),
                 ActiveModal::ManageFeeds => ([600.0, 500.0], true),
+                ActiveModal::LogModal => ([900.0, 900.0], true),
                 ActiveModal::Settings => ([600.0, 400.0], true),
                 _ => ([400.0, 300.0], false),
             };

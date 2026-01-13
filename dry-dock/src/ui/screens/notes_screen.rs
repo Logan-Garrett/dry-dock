@@ -5,6 +5,7 @@ use crate::services::NoteService;
 use crate::models::Note;
 use crate::ui::modals::ActiveModal;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 #[derive(Default)]
 pub struct NotesScreen {
@@ -68,7 +69,7 @@ impl NotesScreen {
                             self.notes = notes;
                         }
                         Err(e) => {
-                            println!("Error searching notes: {}", e);
+                            log_service::add_log_entry("ERROR", &format!("Error searching notes: {}", e));
                         }
                     }
                 }
@@ -87,6 +88,7 @@ impl NotesScreen {
                     self.loaded = true;
                 }
                 Err(e) => {
+                    log_service::add_log_entry("ERROR", &format!("Error loading notes: {}", e));
                     ui.colored_label(Theme::DANGER_COLOR, format!("Error loading notes: {}", e));
                     return;
                 }
@@ -186,11 +188,11 @@ impl NotesScreen {
         if let Some(id) = id_to_delete {
             match NoteService::delete_note(id) {
                 Ok(_) => {
-                    println!("Note deleted successfully.");
+                    log_service::add_log_entry("INFO", "Note deleted successfully.");
                     self.notes.retain(|note| note.id != id);
                 }
                 Err(e) => {
-                    println!("Error deleting note: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error deleting note: {}", e));
                 }
             }
         }

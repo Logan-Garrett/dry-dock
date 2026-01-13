@@ -7,6 +7,7 @@ use crate::app::ActiveScreen;
 use crate::ui::modals::*;
 use crate::ui::screens::ScreenFactory;
 use crate::services::rss_service::refresh_all_feeds;
+use crate::services::log_service;
 
 pub struct AppState {
     pub config: Config,
@@ -67,7 +68,7 @@ pub struct BackgroundServiceManager {
 impl BackgroundServiceManager {
     pub fn start_rss_reloader(screen_factory: Arc<Mutex<ScreenFactory>>) -> () {
         std::thread::spawn(move || {
-            println!("RSS Reloader background service started. Will refresh every 5 minutes.");
+            log_service::add_log_entry("INFO", "RSS Reloader background service started. Will refresh every 5 minutes.");
             
             loop {
                 // Wait 5 minutes
@@ -76,16 +77,16 @@ impl BackgroundServiceManager {
                 // Refresh feeds
                 match refresh_all_feeds() {
                     Ok(items_added) => {
-                        println!("RSS Feeds refreshed, {} new items added.", items_added);
+                        log_service::add_log_entry("INFO", &format!("RSS Feeds refreshed, {} new items added.", items_added));
                         
                         // Clear the feeds screen to trigger reload on next render
                         if let Ok(mut factory) = screen_factory.lock() {
                             factory.clear_screen(ActiveScreen::Feeds);
-                            println!("Feeds screen cleared, will reload on next render");
+                            log_service::add_log_entry("INFO", "Feeds screen cleared, will reload on next render");
                         }
                     },
                     Err(e) => {
-                        eprintln!("Error refreshing RSS feeds: {}", e);
+                        log_service::add_log_entry("ERROR", &format!("Error refreshing RSS feeds: {}", e));
                     }
                 }
             }

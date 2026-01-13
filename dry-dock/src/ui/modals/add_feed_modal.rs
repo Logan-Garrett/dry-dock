@@ -3,6 +3,7 @@ use eframe::egui;
 use crate::ui::modals::modal_trait::Modal;
 use crate::dal::FeedsRepository;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 #[derive(Default)]
 pub struct AddFeedModal {
@@ -45,7 +46,7 @@ impl Modal for AddFeedModal {
         ui.horizontal(|ui| {
             if ui.add(Theme::primary_button("Add Feed")).clicked() {
                 if let Err(e) = FeedsRepository::create(&self.url, &self.feed_title) {
-                    println!("Error adding feed: {}", e);
+                    log_service::add_log_entry("ERROR", &format!("Error adding feed: {}", e));
                 }
                 should_close = true;
             }

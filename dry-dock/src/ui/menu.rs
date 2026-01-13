@@ -4,6 +4,7 @@ use crate::models::Config;
 use crate::ui::modals::ActiveModal;
 use crate::app::ActiveScreen;
 use crate::ui::styles::Theme;
+use crate::services::log_service;
 
 /// Renders the application menu bar
 pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::AppState) {
@@ -15,15 +16,16 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
         let exit_button = Theme::button("Exit");
         
         if ui.add(settings_button).clicked() {
-            println!("Loading Settings...");
+            log_service::add_log_entry("INFO", "Loading Settings...");
             state.open_modal(ActiveModal::Settings);
         }
 
         if ui.add(logs_button).clicked() {
-            println!("Opening Logs Directory...");
+            log_service::add_log_entry("INFO", "Opening Logs Directory...");
             // Need to create a modal and either store in sqllite or a file.
             // Need to add a Log service to call instead of println as well as
             // Need a verbose flaf in the config or settings whatever it may be.
+            state.open_modal(ActiveModal::LogModal);
         }
         
         if ui.add(exit_button).clicked() {
@@ -36,7 +38,7 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
     // RSS Button (no dropdown)
     let rss_button = ui.button("RSS");
     if rss_button.clicked() {
-        println!("Loading RSS Feeds Screen...");
+        log_service::add_log_entry("INFO", "Loading RSS Feeds Screen...");
         state.close_modal();
         state.set_active_screen(ActiveScreen::Feeds);
     }
@@ -50,7 +52,7 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
     // Notes Button (no dropdown)
     let notes_button = ui.button("Notes");
     if notes_button.clicked() {
-        println!("Loading Notes Screen...");
+        log_service::add_log_entry("INFO", "Loading Notes Screen...");
         state.close_modal();
         state.set_active_screen(ActiveScreen::Notes);
     }
@@ -96,7 +98,7 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
     // Bookmarks Button
     let bookmarks_button = ui.button("Bookmarks");
     if bookmarks_button.clicked() {
-        println!("Loading Bookmarks Manager...");
+        log_service::add_log_entry("INFO", "Loading Bookmarks Manager...");
         state.set_active_screen(ActiveScreen::Bookmarks);
     }
 
