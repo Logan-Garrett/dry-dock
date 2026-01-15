@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 // src/app/app_state.rs
@@ -79,8 +80,11 @@ impl BackgroundServiceManager {
                 // Wait 5 minutes
                 std::thread::sleep(std::time::Duration::from_secs(300));
                 
-                // Refresh feeds
-                match refresh_all_feeds() {
+                // Create a tokio runtime for async operations
+                let runtime = tokio::runtime::Runtime::new().unwrap();
+                
+                // Refresh feeds using async
+                match runtime.block_on(refresh_all_feeds()) {
                     Ok(items_added) => {
                         log_service::add_log_entry("INFO", &format!("RSS Feeds refreshed, {} new items added.", items_added));
                         
@@ -105,6 +109,98 @@ impl BackgroundServiceManager {
 
     pub fn start_llama_server() -> () {
         // Once we start create a quick client to check if we are up and if not log error
+        std::thread::spawn(move || {
+            let llama_path = crate::common::helper::load_llama_path();
+            if llama_path.is_empty() {
+                log_service::add_log_entry("ERROR", "Llama path not found. Cannot start Llama Server.");
+                return;
+            }
+            
+            log_service::add_log_entry("INFO", &format!("Found Ollama binary at: {}", llama_path));
+            
+            // Check if server is already running before trying to start it
+            let client = reqwest::blocking::Client::new();
+            let already_running = client.get("http://localhost:11434/api/tags")
+                .timeout(std::time::Duration::from_secs(2))
+                .send()
+                .map(|r| r.status().is_success())
+                .unwrap_or(false);
+            
+            if already_running {
+                log_service::add_log_entry("INFO", "Ollama server is already running. Skipping startup.");
+            } else {
+                // Make sure the binary is executable (macOS/Linux)
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(metadata) = std::fs::metadata(&llama_path) {
+                        let mut perms = metadata.permissions();
+                        perms.set_mode(0o755);
+                        let _ = std::fs::set_permissions(&llama_path, perms);
+                    }
+                }
+                
+                // Start the ollama serve command to run the server
+                match Command::new(&llama_path)
+                    .arg("serve")
+                    .spawn()
+                {
+                    Ok(_) => {
+                        log_service::add_log_entry("INFO", "Ollama server started successfully.");
+                    }
+                    Err(e) => {
+                        log_service::add_log_entry("ERROR", &format!("Failed to start Llama Server: {}", e));
+                        return;
+                    }
+                }
+
+                log_service::add_log_entry("INFO", "Llama Server background service started. Checking server status.");
+
+                // Wait a few seconds to allow server to start
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            } 
+
+            // Check if server is responding by calling the API
+            let client = reqwest::blocking::Client::new();
+            let res = client.get("http://localhost:11434/api/tags")
+                .send();
+
+            match res {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        log_service::add_log_entry("INFO", "Llama Server is running and responding.");
+                        
+                        // Check if gemma3 model is available, if not pull it
+                        if let Ok(text) = response.text() {
+                            if !text.contains("gemma3") {
+                                log_service::add_log_entry("INFO", "Model gemma3 not found. Pulling it now...");
+                                
+                                // Pull the model in background
+                                match Command::new(&llama_path)
+                                    .arg("pull")
+                                    .arg("gemma3")
+                                    .spawn()
+                                {
+                                    Ok(_) => {
+                                        log_service::add_log_entry("INFO", "Started pulling gemma3 model. This may take a while...");
+                                    }
+                                    Err(e) => {
+                                        log_service::add_log_entry("ERROR", &format!("Failed to pull model: {}", e));
+                                    }
+                                }
+                            } else {
+                                log_service::add_log_entry("INFO", "Model gemma3 is available.");
+                            }
+                        }
+                    } else {
+                        log_service::add_log_entry("ERROR", "Llama Server is not responding correctly.");
+                    }
+                }
+                Err(e) => {
+                    log_service::add_log_entry("ERROR", &format!("Failed to connect to Llama Server: {}", e));
+                }
+            }
+        });
     }
 
     pub fn start_daily_assitant_message_backup_scraper() -> () {

@@ -23,6 +23,11 @@ impl Modal for LogModal {
         ui.horizontal(|ui| {
             ui.label("Search Logs:");
             ui.text_edit_singleline(&mut self.search_query);
+
+            // Close Button
+            if ui.button("Close").clicked() {
+                should_close = true;
+            }
         });
 
         // Load and display logs (filtered by search if query exists)
@@ -32,6 +37,7 @@ impl Modal for LogModal {
         } else {
             log_service::search_logs(&self.search_query)
         };
+
         egui::ScrollArea::vertical().show(ui, |ui| {
             for (id, level, message, timestamp) in logs {
                 ui.horizontal(|ui| {
@@ -39,10 +45,6 @@ impl Modal for LogModal {
                 });
             }
         });
-        
-        if ui.button("Close").clicked() {
-            should_close = true;
-        }
         
         should_close
     }

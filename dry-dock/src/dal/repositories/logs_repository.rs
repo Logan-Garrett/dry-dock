@@ -28,21 +28,21 @@ impl LogsRepository {
         Ok(())
     }
 
-    /// Get all logs
+    /// Get all logs (limited to most recent 1000)
     pub fn get_all() -> Result<Vec<(i32, String, String, String)>, String> {
         let conn = get_connection()?;
 
         let mut stmt = conn
-            .prepare("SELECT id, level, message, timestamp FROM logs ORDER BY timestamp DESC")
+            .prepare("SELECT id, level, message, timestamp FROM logs ORDER BY timestamp DESC LIMIT 1000")
             .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
         let logs = stmt
             .query_map([], |row| {
                 Ok((
-                    row.get::<_, i32>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                    row.get::<_, i64>(3)?,
+                    row.get::<_, i32>("id")?,
+                    row.get::<_, String>("level")?,
+                    row.get::<_, String>("message")?,
+                    row.get::<_, i64>("timestamp")?,
                 ))
             })
             .map_err(|e| format!("Failed to query logs: {}", e))?

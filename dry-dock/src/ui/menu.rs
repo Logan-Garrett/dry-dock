@@ -65,11 +65,10 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
 
     // For now Commmenting out Assitant and Terminal until implemented
 
-    /*
     // Assistant Button
     let assistant_button = ui.button("Assistant");
     if assistant_button.clicked() {
-        println!("Loading AI Assistant Screen...");
+        log_service::add_log_entry("INFO", "Loading Assistant Screen...");
         state.close_modal();
         state.set_active_screen(ActiveScreen::Assistant);
     }
@@ -80,6 +79,7 @@ pub fn render_menu(ui: &mut egui::Ui, config: &Config, state: &mut crate::app::A
 
     ui.separator();
 
+    /*
     // Terminal Button
     let terminal_button = ui.button("Terminal");
     if terminal_button.clicked() {

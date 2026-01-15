@@ -7,3 +7,4 @@ pub mod bookmark_service;
 pub mod log_service;
 
 pub use note_service::NoteService;
+pub use assistant_bridge_service::AssistantService;

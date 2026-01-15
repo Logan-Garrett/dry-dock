@@ -12,7 +12,7 @@ category = "public.app-category.productivity"
 short_description = "Personal productivity application"
 long_description = "Dry Dock - RSS feeds, notes, bookmarks, and more as I need them."
 icon = ["assets/icons/app_icon.icns", "assets/icons/app_icon.png"]
-resources = ["AppConfig.json", "assets/icons/app_icon.png", "assets/icons/app_icon.icns"]
+resources = ["AppConfig.json", "assets/icons/app_icon.png", "assets/icons/app_icon.icns", "assets/llama/"] # We want all of the llama assets
 
 [dependencies]
 chrono = "0.4.42"

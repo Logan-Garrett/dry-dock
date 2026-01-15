@@ -2,7 +2,7 @@ use crate::dal::{FeedsRepository, FeedItemsRepository};
 use chrono::{DateTime, Utc};
 use super::log_service;
 
-pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, String> {
+pub async fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, String> {
     // Trim and validate URL
     let mut feed_url = feed_url.trim().to_string();
     
@@ -20,7 +20,7 @@ pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, Strin
     log_service::add_log_entry("INFO", &format!("Fetching feed from: {}", feed_url));
     
     // Create a client with proper configuration
-    let client = reqwest::blocking::Client::builder()
+    let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         .redirect(reqwest::redirect::Policy::limited(10))
         .timeout(std::time::Duration::from_secs(30))
@@ -30,6 +30,7 @@ pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, Strin
     // Fetch the RSS feed
     let response = client.get(&feed_url)
         .send()
+        .await
         .map_err(|e| format!("Failed to fetch feed from '{}': {}", feed_url, e))?;
     
     if !response.status().is_success() {
@@ -38,6 +39,7 @@ pub fn fetch_and_store_feed(feed_id: i32, feed_url: &str) -> Result<usize, Strin
     }
     
     let content = response.text()
+        .await
         .map_err(|e| format!("Failed to read feed content: {}", e))?;
     
     // Try parsing as RSS first, then Atom
@@ -169,7 +171,7 @@ fn store_feed_items(feed_id: i32, items: Vec<FeedItem>) -> Result<usize, String>
     Ok(items_added)
 }
 
-pub fn refresh_all_feeds() -> Result<String, String> {
+pub async fn refresh_all_feeds() -> Result<String, String> {
     // Get all feeds from repository
     let feeds = FeedsRepository::get_all()?;
     
@@ -180,7 +182,10 @@ pub fn refresh_all_feeds() -> Result<String, String> {
     
     for (feed_id, feed_url, feed_title) in feeds {
         log_service::add_log_entry("INFO", &format!("Processing feed {}: {} ({})", feed_id, feed_title, feed_url));
-        match fetch_and_store_feed(feed_id, &feed_url) {
+        // Small delay to avoid overwhelming servers
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        
+        match fetch_and_store_feed(feed_id, &feed_url).await {
             Ok(count) => {
                 log_service::add_log_entry("INFO", &format!("Feed {} ({}): Added {} items", feed_id, feed_title, count));
                 total_items += count;

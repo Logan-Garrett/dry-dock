@@ -53,6 +53,19 @@ impl ScreenRenderer for BookmarksScreenWrapper {
     }
 }
 
+/// Wrapper for AssistantScreen to implement ScreenRenderer
+struct AssistantScreenWrapper(AssistantScreen);
+
+impl ScreenRenderer for AssistantScreenWrapper {
+    fn render(&mut self, ui: &mut egui::Ui, modal_opener: &mut dyn FnMut(ActiveModal)) {
+        self.0.render(ui, modal_opener);
+    }
+
+    fn clear_for_reload(&mut self) {
+        self.0.clear_for_reload();
+    }
+}
+
 /// Factory for creating and managing screens dynamically
 pub struct ScreenFactory {
     screens: HashMap<ActiveScreen, BoxedScreen>,
@@ -76,6 +89,10 @@ impl ScreenFactory {
         screens.insert(
             ActiveScreen::Bookmarks,
             Box::new(BookmarksScreenWrapper(BookmarksScreen::default())),
+        );
+        screens.insert(
+            ActiveScreen::Assistant,
+            Box::new(AssistantScreenWrapper(AssistantScreen::default())),
         );
 
         Self {
@@ -107,19 +124,13 @@ impl ScreenFactory {
             ActiveScreen::None => {
                 // No screen active, home will be shown
             }
-            ActiveScreen::Assistant => {
-                egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.heading("Assistant");
-                    ui.label("Assistant screen is under construction.");
-                });
-            }
             ActiveScreen::Terminal => {
                 egui::CentralPanel::default().show(ctx, |ui| {
                     ui.heading("Terminal");
                     ui.label("In development.");
                 });
             }
-            ActiveScreen::Feeds | ActiveScreen::Notes | ActiveScreen::Bookmarks => {
+            ActiveScreen::Feeds | ActiveScreen::Notes | ActiveScreen::Bookmarks | ActiveScreen::Assistant => {
                 if let Some(screen) = self.screens.get_mut(&self.current_screen) {
                     egui::CentralPanel::default().show(ctx, |ui| {
                         screen.render(ui, modal_opener);

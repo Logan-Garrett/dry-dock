@@ -74,3 +74,54 @@ pub fn load_icon_path(config_icon_path: &str) -> String {
     // Fallback to original path
     config_icon_path.to_string()
 }
+
+pub fn load_llama_path() -> String {
+    // Try to get the bundled ollama binary from the app resources
+    // Check multiple possible locations:
+    
+    // 1. Try the Resources/ollama path (actual ollama binary)
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            // For bundled app: MyApp.app/Contents/MacOS/../Resources/
+            let resources_ollama = exe_dir.parent()
+                .and_then(|p| Some(p.join("Resources").join("ollama")));
+            
+            if let Some(path) = resources_ollama {
+                if path.exists() {
+                    return path.to_string_lossy().to_string();
+                }
+            }
+            
+            // For development: target/debug/ or target/release/
+            let dev_ollama = exe_dir
+                .join("assets")
+                .join("llama")
+                .join("Resources")
+                .join("ollama");
+            
+            if dev_ollama.exists() {
+                return dev_ollama.to_string_lossy().to_string();
+            }
+        }
+    }
+    
+    // 2. Try relative path from current directory (for dev mode)
+    let relative_path = std::path::Path::new("assets/llama/Resources/ollama");
+    if relative_path.exists() {
+        if let Ok(canonical) = relative_path.canonicalize() {
+            return canonical.to_string_lossy().to_string();
+        }
+    }
+    
+    // 3. Check if ollama is installed system-wide
+    if let Ok(output) = std::process::Command::new("which").arg("ollama").output() {
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return path;
+            }
+        }
+    }
+    
+    String::new()
+}

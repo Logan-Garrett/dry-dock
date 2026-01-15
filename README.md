@@ -1,14 +1,16 @@
 # Dry Dock 🚢
 
-A modern personal productivity application built with Rust and egui. Manage your bookmarks, notes, and RSS feeds in one beautiful dark-themed interface.More to come such as local llama assistant, settings control, and more!
+A modern personal productivity application built with Rust and egui. Manage your bookmarks, notes, RSS feeds, and chat with a local AI assistant in one beautiful dark-themed interface.
 
 ## Features
 
-- **📚 Bookmarks Manager**: Save and organize your favorite web links and folder paths.
-- **📝 Notes**: Create and manage personal notes.
-- **📰 RSS Feeds**: Subscribe to and see RSS/Atom feeds as they publish. (Reloads every 5 Minutes)
-- **🎨 Dark Theme**: High Contrast dark mode.
-- **💾 Local SQLite Database**: All your data stays on your machine.
+- **🤖 AI Assistant**: Chat with a local Ollama-powered AI assistant (bundled, no external installation needed)
+- **📚 Bookmarks Manager**: Save and organize your favorite web links and folder paths
+- **📝 Notes**: Create and manage personal notes with full CRUD operations
+- **📰 RSS Feeds**: Subscribe to and read RSS/Atom feeds with async updates (auto-refreshes every 5 minutes)
+- **🎨 Dark Theme**: High contrast dark mode with custom styling
+- **💾 Local SQLite Database**: All your data stays on your machine
+- **🔒 Privacy First**: No cloud services, no tracking, completely offline
 
 ## Screenshots
 
@@ -19,6 +21,8 @@ A modern personal productivity application built with Rust and egui. Manage your
 ![Dry Dock Notes Screen](docs/images/Notes_Screen.png)
 
 ![Dry Dock Bookmarks Screen](docs/images/Bookmarks_Screen.png)
+
+![Dry Dock Assistant Screen](docs/images/Assistant_Screen.png)
 
 ## Installation
 
@@ -47,11 +51,23 @@ The script will:
 ### Getting Started
 
 1. **Launch Dry Dock** from your Applications folder
-2. Use the **navigation menu** at the top to switch between features:
+2. The **Ollama AI server** will start automatically in the background
+3. Use the **navigation menu** at the top to switch between features:
    - **Home** - Welcome screen
+   - **Assistant** - Chat with the AI assistant
    - **Bookmarks** - Manage your saved links
    - **Notes** - Create and organize notes
    - **Feeds** - Subscribe to RSS/Atom feeds
+
+### AI Assistant
+
+- Navigate to the **Assistant** screen from the top menu
+- Check the server status indicator (● Online/Offline)
+- Type your message in the input box at the bottom
+- Press **Enter** to send (Shift+Enter for new line)
+- The AI will respond using the locally running Ollama server
+- Click **"Clear Chat"** to start a new conversation
+- Uses the `gemma3` model (auto-downloaded on first use)
 
 ### Managing Bookmarks
 
@@ -71,9 +87,12 @@ The script will:
 
 - Click **"Add Feed"** to subscribe to an RSS/Atom feed
 - Enter the feed URL (http/https will be auto-added if missing)
-- Click **"Refresh All Feeds"** to fetch latest articles
+- Click **"Refresh All Feeds"** to manually fetch latest articles
+- **Auto-refresh**: Feeds automatically update every 5 minutes in the background
+- **Async Updates**: Feed fetching is non-blocking and won't freeze the UI
 - Browse articles with titles, descriptions, and publication dates
 - Click **"Open Link"** to read the full article in your browser
+- Manage subscriptions with the **"Manage Feeds"** button
 
 ## Data Storage
 
@@ -84,6 +103,16 @@ Dry Dock stores all data locally in a SQLite database:
 ```
 
 Your data never leaves your machine and is completely private.
+
+### Ollama AI Models
+
+The Ollama server stores downloaded AI models in:
+
+```
+~/.ollama/models
+```
+
+The bundled Ollama binaries and libraries (~299MB) are included in the application bundle.
 
 ## Building for Development
 
@@ -103,6 +132,15 @@ Dry Dock follows a clean **3-tier architecture**:
 3. **Data Access Layer** - Repository pattern for database operations
 
 This separation ensures maintainability, testability, and clear separation of concerns.
+
+### Key Technologies
+
+- **Rust** - Memory-safe systems programming
+- **egui** - Immediate mode GUI framework
+- **SQLite** - Local database storage
+- **Ollama** - Local AI inference server
+- **Tokio** - Async runtime for non-blocking operations
+- **reqwest** - HTTP client for RSS feeds and API calls
 
 ## Contributing
 

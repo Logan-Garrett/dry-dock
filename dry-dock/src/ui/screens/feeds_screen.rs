@@ -43,10 +43,17 @@ impl FeedsScreen {
 
             // Refresh All Button
             if ui.add(Theme::success_button("Refresh All")).clicked() {
-                match rss_service::refresh_all_feeds() {
-                    Ok(msg) => log_service::add_log_entry("INFO", &msg),
-                    Err(e) => log_service::add_log_entry("ERROR", &format!("Error refreshing feeds: {}", e)),
-                }
+                log_service::add_log_entry("INFO", "Starting RSS feed refresh in background...");
+                
+                // Spawn a thread to run the async refresh
+                std::thread::spawn(|| {
+                    let runtime = tokio::runtime::Runtime::new().unwrap();
+                    match runtime.block_on(rss_service::refresh_all_feeds()) {
+                        Ok(msg) => log_service::add_log_entry("INFO", &msg),
+                        Err(e) => log_service::add_log_entry("ERROR", &format!("Error refreshing feeds: {}", e)),
+                    }
+                });
+                
                 self.loaded = false;
             }
 
