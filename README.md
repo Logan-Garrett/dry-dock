@@ -1,6 +1,6 @@
 # Dry Dock 🚢
 
-A modern personal productivity application built with Rust and egui. Manage your bookmarks, notes, and RSS feeds in one beautiful dark-themed interface.
+A modern personal productivity application built with Rust and egui. Manage your bookmarks, notes, and RSS feeds in one beautiful dark-themed interface.More to come such as local llama assistant, settings control, and more!
 
 ## Features
 

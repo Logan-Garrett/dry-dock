@@ -27,6 +27,8 @@ impl AppState {
         // whenever I so please. Models I dont care about and maybe the access to services.
         BackgroundServiceManager::start_rss_reloader(screen_factory.clone());
 
+        BackgroundServiceManager::start_llama_server();
+
         // Create modal factory and give it access to screen factory
         let mut modal_factory = ModalFactory::new();
         modal_factory.set_screen_factory(screen_factory.clone());
@@ -99,6 +101,10 @@ impl BackgroundServiceManager {
     pub fn start_daily_backup() -> () {
         // Placeholder for future daily backup service
         // Allow a user to configure a backup locatio to ship this to???
+    }
+
+    pub fn start_llama_server() -> () {
+        // Once we start create a quick client to check if we are up and if not log error
     }
 
     pub fn start_daily_assitant_message_backup_scraper() -> () {
