@@ -41,6 +41,7 @@ impl Modal for UpdateNoteModal {
                 }
                 Err(e) => {
                     ui.colored_label(Theme::DANGER_COLOR, format!("Error loading note: {}", e));
+                    log_service::add_log_entry("ERROR", &format!("Error loading note: {}", e));
                     return true; // Close modal on error
                 }
             }

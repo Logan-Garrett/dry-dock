@@ -1,5 +1,5 @@
 // src/ui/screens/bookmarks_screen.rs
-use eframe::egui;
+use eframe::egui::{self};
 use crate::services::bookmark_service;
 use crate::models::Bookmark;
 use crate::ui::modals::ActiveModal;

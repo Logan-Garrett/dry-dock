@@ -29,7 +29,6 @@ impl ViewNoteModal {
         let mut in_code_block = false;
         let mut in_emphasis = false;
         let mut in_strong = false;
-        let mut in_list = false;
         let mut list_depth = 0;
         let mut in_list_item = false;
 
@@ -81,7 +80,6 @@ impl ViewNoteModal {
                     in_strong = false;
                 }
                 Event::Start(Tag::List(_)) => {
-                    in_list = true;
                     list_depth += 1;
                     if list_depth == 1 {
                         ui.add_space(Theme::SPACING_SMALL);
@@ -90,7 +88,6 @@ impl ViewNoteModal {
                 Event::End(TagEnd::List(_)) => {
                     list_depth -= 1;
                     if list_depth == 0 {
-                        in_list = false;
                         ui.add_space(Theme::SPACING_MEDIUM);
                     }
                 }
@@ -167,7 +164,7 @@ impl ViewNoteModal {
                 Event::SoftBreak => {
                     if !in_list_item {
                         ui.label(" ");
-                    }
+                    } // This may be a bug.
                 }
                 Event::HardBreak => {
                     ui.add_space(Theme::SPACING_SMALL);

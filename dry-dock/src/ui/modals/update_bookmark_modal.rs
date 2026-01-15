@@ -74,7 +74,7 @@ impl Modal for UpdateBookmarkModal {
             if ui.add(Theme::primary_button("Update Bookmark")).clicked() {
                 if let Err(e) = BookmarksRepository::update(self.bookmark_id, &self.name, &self.location) {
                     log_service::add_log_entry("ERROR", &format!("Error updating bookmark: {}", e));
-                }
+                } 
                 should_close = true;
             }
             if ui.add(Theme::button("Cancel")).clicked() {

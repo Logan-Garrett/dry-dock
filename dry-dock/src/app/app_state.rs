@@ -1,4 +1,3 @@
-use eframe::egui;
 use std::sync::{Arc, Mutex};
 
 // src/app/app_state.rs
@@ -28,9 +27,13 @@ impl AppState {
         // whenever I so please. Models I dont care about and maybe the access to services.
         BackgroundServiceManager::start_rss_reloader(screen_factory.clone());
 
+        // Create modal factory and give it access to screen factory
+        let mut modal_factory = ModalFactory::new();
+        modal_factory.set_screen_factory(screen_factory.clone());
+
         Self {
             config,
-            modal_factory: ModalFactory::new(),
+            modal_factory,
             screen_factory,
         }
     }
