@@ -79,12 +79,12 @@ pub fn load_llama_path() -> String {
     // Try to get the bundled ollama binary from the app resources
     // Check multiple possible locations:
     
-    // 1. Try the Resources/ollama path (actual ollama binary)
+    // 1. Try the Resources/assets/llama/Resources/ollama path (bundled app)
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            // For bundled app: MyApp.app/Contents/MacOS/../Resources/
+            // For bundled app: MyApp.app/Contents/MacOS/../Resources/assets/llama/Resources/ollama
             let resources_ollama = exe_dir.parent()
-                .and_then(|p| Some(p.join("Resources").join("ollama")));
+                .and_then(|p| Some(p.join("Resources").join("assets").join("llama").join("Resources").join("ollama")));
             
             if let Some(path) = resources_ollama {
                 if path.exists() {
